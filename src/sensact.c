@@ -38,7 +38,7 @@
 #include "packet.h"
 #include "debug.h"
 
-char error[256];
+char error[PACKET_VALUE_MAX_SIZE];
 char *sa_error;
 
 void init(void)
@@ -152,7 +152,7 @@ int send_command(
     int packet_length;
     unsigned short id;
     int ret;
-    char data[256];
+    char data[PACKET_VALUE_MAX_SIZE];
 
     // Create request packet
     packet_length = create_request_packet(&request_packet, command, name, set_value, set_value_size, &id);
@@ -195,11 +195,12 @@ int send_command(
                 sa_error = (char *) &error;
                 return -1;
             }
-
-            // Return value size in case of getting data
-            if (command == GET_DATA)
-                *get_value_size = response_packet.data_length;
         }
+
+        // Return value size in case of getting data
+        if (command == GET_DATA)
+            *get_value_size = response_packet.data_length;
+
     } else
         return -1;
 
