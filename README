@@ -1,0 +1,49 @@
+== libsensact - the sensor/actuator library =====
+
+1. Introduction
+
+This library provides a simple API for communicating with sensors and actuators
+connected via various connection types.
+
+Currently only USB connections are supported. However, in the future a modular
+communication backend will be supported so that it will be possible to
+integrate with open or proprietary communication backends.
+
+2. Example application
+
+ #include <stdio.h>
+ #include <unistd.h>
+ #include "sensact.h"
+
+ #define TIMEOUT 1000 // ms
+
+ /* 
+  * This example uses libsensact to fetch roll, pitch, and yaw values from the
+  * "compass0" sensor. The sensor is connected via USB.
+  */
+
+ int main(void)
+ {
+    int handle;
+    int roll, pitch, yaw;
+
+    handle = connect("compass0");
+
+    get_int(handle, "roll", &roll, TIMEOUT);
+    printf("roll:     %03d\n", roll);
+
+    get_int(handle, "pitch", &pitch, TIMEOUT);
+    printf("pitch:    %03d\n", pitch);
+
+    get_int(handle, "yaw", &yaw, TIMEOUT);
+    printf("yaw:      %03d\n", yaw);
+
+    disconnect(handle);
+
+    return 0;
+ }
+
+3. License
+
+libsensact is released under the BSD-3 license. Please see the COPYING file.
+
