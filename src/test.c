@@ -38,12 +38,12 @@
 #define DUMMY_TEST
 //#define NFC_TEST
 
-#define TIMEOUT 1000 // ms
+#define TIMEOUT 100 // ms
 
 int main(void)
 {
     int handle;
-    int i=1;
+    int i=1000;
 
 #ifdef SENSHUB_TEST
 
@@ -108,7 +108,7 @@ int main(void)
 
     while (i--)
     {
-/*        set_char(handle, "char0", 42, TIMEOUT);
+        set_char(handle, "char0", 42, TIMEOUT);
         get_char(handle, "char0", &char0, TIMEOUT);
         printf("char0 = %d\n", char0);
 
@@ -123,20 +123,17 @@ int main(void)
         set_float(handle, "float0", 45.45, TIMEOUT);
         get_float(handle, "float0", &float0, TIMEOUT);
         printf("float0: %2.2f\n", float0);
-*/
-        set_data(handle, "data0", &data0, 512, TIMEOUT);
-        //set_data(handle, "data0", &data0, strlen(data0)+1, TIMEOUT);
-        printf("Error: %s\n", sa_error);
+
+        set_data(handle, "data0", &data0, strlen(data0)+1, TIMEOUT);
         get_data(handle, "data0", &data0_rcv, &size, TIMEOUT);
         printf("data0: %s\n", (char *) &data0_rcv);
         printf("size=%d\n", size);
-/*
+
         // Error test
         if (get_char(handle, "char1", &char0, TIMEOUT) == 0)
             printf("char0 = %d\n", char0);
         else
             printf("Error: %s\n", sa_error);
-*/
     }
 
     disconnect(handle);
