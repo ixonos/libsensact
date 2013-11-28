@@ -189,6 +189,8 @@ int send_command(
         {
             // Receive response payload
             ret = session[handle].read(handle, (char *) &data, response_packet.data_length, timeout);
+            if (ret < 0 )
+                return -1;
 
             if (response_packet.response_code == RSP_OK)
             {
