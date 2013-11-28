@@ -34,79 +34,54 @@
 #include <string.h>
 #include "sensact.h"
 
-//#define SENSHUB_TEST
-#define DUMMY_TEST
-//#define NFC_TEST
+/* List of supported sensor/actuator devices */
+struct device_t devices[] =
+{
+   {  .name = "dummy0",
+      .description = "TI Tiva Launchpad device (dummy)",
+      .connection = USB,
+      .vid = 0x1CBE,
+      .pid = 0x0040,
+      .endpoint = 0x1 },
+
+   { }
+};
 
 #define TIMEOUT 100 // ms
 
 int main(void)
 {
     int handle;
-    int i=1;
+    int loop=100;
 
-#ifdef SENSHUB_TEST
-
-    int roll, pitch, yaw, altitude;
-    float ambTemp, pressure, refPressure = 101325.0f, humidity;
-
-    handle = connect("senshub0");
-
-    set_float(handle, "refPressure", refPressure, TIMEOUT);
-
-    while (i--)
-    {
-        get_int(handle, "roll", &roll, TIMEOUT);
-        printf("roll:     %03d\n", roll);
-
-        get_int(handle, "pitch", &pitch, TIMEOUT);
-        printf("pitch:    %03d\n", pitch);
-
-        get_int(handle, "yaw", &yaw, TIMEOUT);
-        printf("yaw:      %03d\n", yaw);
-
-        get_float(handle, "objTemp", &ambTemp, TIMEOUT);
-        printf("temp:     %2.2f\n", ambTemp);
-
-        get_float(handle, "pressure", &pressure, TIMEOUT);
-        printf("presure:  %2.2f Pa\n", pressure);
-
-        get_int(handle, "altitude", &altitude, TIMEOUT);
-        printf("altitude: %d m\n", altitude);
-
-        get_float(handle, "humidity", &humidity, TIMEOUT);
-        printf("humidity: %2.2f\n", humidity);
-
-        sleep(1);
-    }
-
-    disconnect(handle);
-
-#endif // SENSHUB_TEST
-
-#ifdef DUMMY_TEST
-
-    char char0 = 0;
+    // Test variables/data
+    char  char0;
     short short0;
-    int int0;
+    int   int0;
     float float0;
-    char data0[1024] = "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                       "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                       "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                       "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                       "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                       "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                       "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                       "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                       "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                       "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                       "01234567890123456789012";
+    char  data0[1024] = "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
+                        "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
+                        "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
+                        "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
+                        "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
+                        "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
+                        "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
+                        "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
+                        "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
+                        "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
+                        "01234567890123456789012";
     char data0_rcv[1024];
-    int size;
+    int  data0_size;
 
+
+    // Register known devices
+    register_devices((struct device_t *) &devices);
+
+    // Connect to device
     handle = connect("dummy0");
 
-    while (i--)
+    // Run test loop
+    while (loop--)
     {
         set_char(handle, "char0", 42, TIMEOUT);
         get_char(handle, "char0", &char0, TIMEOUT);
@@ -125,43 +100,19 @@ int main(void)
         printf("float0: %2.2f\n", float0);
 
         set_data(handle, "data0", &data0, strlen(data0)+1, TIMEOUT);
-        get_data(handle, "data0", &data0_rcv, &size, TIMEOUT);
+        get_data(handle, "data0", &data0_rcv, &data0_size, TIMEOUT);
         printf("data0: %s\n", (char *) &data0_rcv);
-        printf("size=%d\n", size);
+        printf("data0 size=%d\n", data0_size);
 
-        // Error test
+        // Error test (char1 not suppored by device)
         if (get_char(handle, "char1", &char0, TIMEOUT) == 0)
-            printf("char0 = %d\n", char0);
+            printf("char1 = %d\n", char0);
         else
             printf("Error: %s\n", sa_error);
     }
 
+    // Disconnect from device
     disconnect(handle);
-
-#endif // DUMMY_TEST
-
-#ifdef NFC_TEST
-
-    char char0;
-    char record0[256] = "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                        "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                        "0123456789012345678901234567890123456789012345678901234";
-    char record0_rcv[1024];
-    int size;
-
-    handle = connect("nfc0");
-
-    while (i--)
-    {
-        set_data(handle, "record0", &record0, strlen(record0)+1, TIMEOUT);
-        get_data(handle, "record0", &record0_rcv, &size, TIMEOUT);
-        printf("record0: %s\n", (char *) &record0_rcv);
-        printf("size=%d\n", size);
-    }
-
-    disconnect(handle);
-
-#endif // NFC_TEST
 
     return 0;
 }

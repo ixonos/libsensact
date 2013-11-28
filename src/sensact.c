@@ -38,6 +38,8 @@
 #include "packet.h"
 #include "debug.h"
 
+static struct device_t *device;
+
 char error[PACKET_VALUE_MAX_SIZE];
 char *sa_error;
 
@@ -50,9 +52,16 @@ void init(void)
         session[i].allocated = false;
 }
 
+int register_devices(struct device_t *devices)
+{
+    device = devices;
+
+    return 0;
+}
+
 int connect(char *name)
 {
-    int i=0, j=0;
+    int i=0;
     bool session_available=false;
     bool device_found=false;
 
@@ -76,26 +85,26 @@ int connect(char *name)
     }
 
     // Look up device name in list of supported devices
-    while (device[j].name != NULL)
+    while (device->name != NULL)
     {
-        if (strcmp(device[j].name, name) == 0)
+        if (strcmp(device->name, name) == 0)
         {
             device_found = true;
             break;
         }
-        j++;
+        device++;
     }
 
     if (!device_found)
     {
-        printf("Error: No device found!\n");
+        printf("Error: Device %s not found!\n", name);
         exit(-1);
     }
 
     // Initialize session
-    session[i].device = &device[j];
+    session[i].device = device;
 
-    switch (device[j].connection)
+    switch (device->connection)
     {
         int status;
         case USB:

@@ -32,7 +32,42 @@
 #ifndef SENSACT_H
 #define SENSACT_H
 
+enum connection_t
+{
+   USB,
+   ETHERCAT,
+   CAN,
+   PROFIBUS,
+   PROFINET,
+   BLUETOOTH,
+   WIFI,
+   I2C,
+   SPI,
+};
+
+struct device_t
+{
+   const char *name;
+   const char *description;
+   const enum connection_t connection;
+
+   /* USB options */
+   const int vid;
+   const int pid;
+   const int endpoint;
+
+   /* ETHERCAT options */
+   /* CAN options */
+   /* PROFIBUS options */
+   /* PROFINET options */
+   /* BLUETOOTH options */
+   /* WIFI options */
+
+};
+
 extern char *sa_error;
+
+int register_devices(struct device_t *devices); // Register devices
 
 int connect(char *name);    // Connect to device with name
 int disconnect(int device); // Disconnect device

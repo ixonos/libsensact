@@ -7,7 +7,7 @@ CFLAGS=-Wall -lusb -fPIC -DVERSION=$(VERSION) `pkg-config libusb-1.0 --cflags` -
 LDFLAGS=-lsensact `pkg-config libusb-1.0 --libs` -L.
 VERSION=0.2
 
-objects = sensact.o session.o device.o usb.o packet.o
+objects = sensact.o session.o usb.o packet.o
      
 all: libsensact.so
      

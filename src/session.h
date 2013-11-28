@@ -32,7 +32,7 @@
 #ifndef SESSION_H
 #define SESSION_H
 
-#include "device.h"
+#include "sensact.h"
 #include "usb.h"
 
 #define MAX_SESSIONS 40
