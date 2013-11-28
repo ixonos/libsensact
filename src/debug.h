@@ -34,9 +34,9 @@
 
 #ifdef DEBUG
 #define debug_printf(format, args...) \
-   fprintf (stdout, "[sensact] " format, ## args)
+    fprintf (stdout, "[sensact] " format, ## args)
 #define debug_printf_raw(format, args...) \
-   fprintf (stdout, "" format, ## args)
+    fprintf (stdout, "" format, ## args)
 #else
 #define debug_printf(format, args...) 
 #define debug_printf_raw(format, args...) 

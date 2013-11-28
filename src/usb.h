@@ -36,7 +36,7 @@
 
 struct usb_t
 {
-   struct libusb_device_handle *device;
+    struct libusb_device_handle *device;
 };
 
 int usb_connect(struct libusb_device_handle **usb_device, int vid, int pid, int endpoint);

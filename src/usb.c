@@ -38,70 +38,70 @@
 
 int usb_connect(struct libusb_device_handle **usb_device, int vid, int pid, int endpoint)
 {
-   libusb_device_handle *device;
+    libusb_device_handle *device;
 
-   libusb_init(NULL);
+    libusb_init(NULL);
 
-   device = libusb_open_device_with_vid_pid(NULL, vid, pid);
+    device = libusb_open_device_with_vid_pid(NULL, vid, pid);
 
-   if (device != NULL)
-   {
-      libusb_detach_kernel_driver(device, 0);
+    if (device != NULL)
+    {
+        libusb_detach_kernel_driver(device, 0);
 
-      int claimed = libusb_claim_interface(device, 0);
+        int claimed = libusb_claim_interface(device, 0);
 
-      if (claimed == 0)
-      {
-         debug_printf("Connected to USB device (vid=%X,pid=%X)\n", vid, pid);
+        if (claimed == 0)
+        {
+            debug_printf("Connected to USB device (vid=%X,pid=%X)\n", vid, pid);
 
-         // Store USB device handle for session
-         *usb_device = device;
+            // Store USB device handle for session
+            *usb_device = device;
 
-         return 0;
-      }
+            return 0;
+        }
 
-      libusb_close(device);
-   }
+        libusb_close(device);
+    }
 
-   printf("Error: Could not connect USB device (vid=%X,pid=%X)\n", vid, pid);
+    printf("Error: Could not connect USB device (vid=%X,pid=%X)\n", vid, pid);
 
-   return -1;
+    return -1;
 }
 
 int usb_disconnect(int handle)
 {
-   debug_printf("Disconnecting USB device...\n");
+    debug_printf("Disconnecting USB device...\n");
 
-   // Release USB interface
-   libusb_release_interface(session[handle].usb.device, 0);
-   libusb_close(session[handle].usb.device);
+    // Release USB interface
+    libusb_release_interface(session[handle].usb.device, 0);
+    libusb_close(session[handle].usb.device);
 
-   return 0;
+    return 0;
 }
 
 int usb_reconnect(int handle)
 {
-   int ret;
-   static int disconnected = 0;
+    int ret;
+    static int disconnected = 0;
 
-   debug_printf("Reconnecting...\n");
+    debug_printf("Reconnecting...\n");
 
-   // Wait a short while to let USB device settle a bit
-   usleep(500000); // 500 ms
+    // Wait a short while to let USB device settle a bit
+    usleep(500000); // 500 ms
 
-   // Only disconnect if not already disconnected
-   if (!disconnected)
-   {
-       ret = usb_disconnect(handle);
-       disconnected = 1;
-   }
+    // Only disconnect if not already disconnected
+    if (!disconnected)
+    {
+        ret = usb_disconnect(handle);
+        disconnected = 1;
+    }
 
-   ret = usb_connect(&session[handle].usb.device, session[handle].device->vid,
-                     session[handle].device->pid, session[handle].device->endpoint);
-   if (ret == 0)
-       disconnected = 0;
+    ret = usb_connect(&session[handle].usb.device, session[handle].device->vid,
+                      session[handle].device->pid, session[handle].device->endpoint);
+    if (ret == 0)
+        disconnected = 0;
 
-   return ret;
+    return ret;
 }
 
 int usb_write(int handle, char *data, int length, int timeout)
@@ -119,7 +119,7 @@ int usb_write(int handle, char *data, int length, int timeout)
     // Write bulk message
     ret = libusb_bulk_transfer(session[handle].usb.device,
                                session[handle].device->endpoint | LIBUSB_ENDPOINT_OUT,
-                               (unsigned char *)data, length,
+                               (unsigned char *) data, length,
                                &count, timeout);
 
     // If device disconnected try reconnect
@@ -138,32 +138,32 @@ int usb_write(int handle, char *data, int length, int timeout)
 
 int usb_read(int handle, char *data, int length, int timeout)
 {
-   int count;
-   int ret;
-   int i;
+    int count;
+    int ret;
+    int i;
 
-   // Read bulk message
-   ret = libusb_bulk_transfer(session[handle].usb.device,
-                              session[handle].device->endpoint | LIBUSB_ENDPOINT_IN,
-                              (unsigned char *) data, length,
-                              &count, timeout);
+    // Read bulk message
+    ret = libusb_bulk_transfer(session[handle].usb.device,
+                               session[handle].device->endpoint | LIBUSB_ENDPOINT_IN,
+                               (unsigned char *) data, length,
+                               &count, timeout);
 
-   // If device disconnected try reconnect
-   if (ret == LIBUSB_ERROR_NO_DEVICE)
+    // If device disconnected try reconnect
+    if (ret == LIBUSB_ERROR_NO_DEVICE)
         while(ret != 0)
             ret = usb_reconnect(handle);
 
-   // Debug
-   debug_printf("Received data, %d bytes (USB): ", count);
-   for (i=0; i<count; i++)
-      debug_printf_raw("0x%x ", (unsigned char) data[i]);
-   debug_printf_raw("\n");
+    // Debug
+    debug_printf("Received data, %d bytes (USB): ", count);
+    for (i=0; i<count; i++)
+        debug_printf_raw("0x%x ", (unsigned char) data[i]);
+    debug_printf_raw("\n");
 
-   if (ret == LIBUSB_SUCCESS)
-      return count;
-   else
-   {
-     printf("Error: USB read failed (%d) %s\n", ret, libusb_error_name(ret));
-     return -1;
-   }
+    if (ret == LIBUSB_SUCCESS)
+        return count;
+    else
+    {
+        printf("Error: USB read failed (%d) %s\n", ret, libusb_error_name(ret));
+        return -1;
+    }
 }

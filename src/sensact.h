@@ -34,34 +34,34 @@
 
 enum connection_t
 {
-   USB,
-   ETHERCAT,
-   CAN,
-   PROFIBUS,
-   PROFINET,
-   BLUETOOTH,
-   WIFI,
-   I2C,
-   SPI,
+    USB,
+    ETHERCAT,
+    CAN,
+    PROFIBUS,
+    PROFINET,
+    BLUETOOTH,
+    WIFI,
+    I2C,
+    SPI,
 };
 
 struct device_t
 {
-   const char *name;
-   const char *description;
-   const enum connection_t connection;
+    const char *name;
+    const char *description;
+    const enum connection_t connection;
 
-   /* USB options */
-   const int vid;
-   const int pid;
-   const int endpoint;
+    /* USB options */
+    const int vid;
+    const int pid;
+    const int endpoint;
 
-   /* ETHERCAT options */
-   /* CAN options */
-   /* PROFIBUS options */
-   /* PROFINET options */
-   /* BLUETOOTH options */
-   /* WIFI options */
+    /* ETHERCAT options */
+    /* CAN options */
+    /* PROFIBUS options */
+    /* PROFINET options */
+    /* BLUETOOTH options */
+    /* WIFI options */
 
 };
 

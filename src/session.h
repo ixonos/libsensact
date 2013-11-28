@@ -39,22 +39,22 @@
 
 struct session_t
 {
-   char allocated;
-   struct device_t *device;
-   int (*disconnect)(int handle);
-   int (*reconnect)(int handle);
-   int (*write)(int handle, char *data, int length, int timeout);
-   int (*read)(int handle, char *data, int length, int timeout);
+    char allocated;
+    struct device_t *device;
+    int (*disconnect)(int handle);
+    int (*reconnect)(int handle);
+    int (*write)(int handle, char *data, int length, int timeout);
+    int (*read)(int handle, char *data, int length, int timeout);
 
-   /* USB data */
-   struct usb_t usb;
+    /* USB data */
+    struct usb_t usb;
 
-   /* ETHERCAT data */
-   /* CAN data */
-   /* PROFIBUS data */
-   /* PROFINET data */
-   /* BLUETOOTH data */
-   /* WIFI data */
+    /* ETHERCAT data */
+    /* CAN data */
+    /* PROFIBUS data */
+    /* PROFINET data */
+    /* BLUETOOTH data */
+    /* WIFI data */
 
 };
 

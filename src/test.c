@@ -81,7 +81,7 @@ int main(void)
     handle = connect("dummy0");
 
     // Run test loop
-    while (loop--)
+    while (loop)
     {
         set_char(handle, "char0", 42, TIMEOUT);
         get_char(handle, "char0", &char0, TIMEOUT);
@@ -109,6 +109,8 @@ int main(void)
             printf("char1 = %d\n", char0);
         else
             printf("Error: %s\n", sa_error);
+
+//        usleep(1000000);
     }
 
     // Disconnect from device
