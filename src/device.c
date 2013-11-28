@@ -36,13 +36,6 @@
 /* List of supported sensor/actuator devices */
 struct device_t device[] =
 {
-   {  .name = "senshub0",
-      .description = "TI Tiva Launchpad device (with Sensehub)",
-      .connection = USB,
-      .vid = 0x1CBE,
-      .pid = 0x0003,
-      .endpoint = 0x1 },
-
    {  .name = "dummy0",
       .description = "TI Tiva Launchpad device (dummy)",
       .connection = USB,
@@ -69,6 +62,13 @@ struct device_t device[] =
       .connection = USB,
       .vid = 0x1CBE,
       .pid = 0x0043,
+      .endpoint = 0x1 },
+
+   {  .name = "senshub0",
+      .description = "TI Tiva Launchpad device (with Sensehub)",
+      .connection = USB,
+      .vid = 0x1CBE,
+      .pid = 0x0044,
       .endpoint = 0x1 },
 
    { }
