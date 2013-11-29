@@ -38,7 +38,7 @@
 #include "packet.h"
 #include "debug.h"
 
-static struct device_t *device;
+static struct device_t *device_list;
 
 char error[PACKET_VALUE_MAX_SIZE];
 char *sa_error;
@@ -54,7 +54,7 @@ void init(void)
 
 int register_devices(struct device_t *devices)
 {
-    device = devices;
+    device_list = devices;
 
     return 0;
 }
@@ -64,6 +64,7 @@ int connect(char *name)
     int i=0;
     bool session_available=false;
     bool device_found=false;
+    struct device_t *device = device_list;
 
     debug_printf("Connecting...\n");
 
