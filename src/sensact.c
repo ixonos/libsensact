@@ -98,7 +98,7 @@ int connect(char *name)
     if (!device_found)
     {
         printf("Error: Device %s not found!\n", name);
-        exit(-1);
+        return -1;
     }
 
     // Initialize session
@@ -114,7 +114,7 @@ int connect(char *name)
                 session[i].device->pid,
                 session[i].device->endpoint);
         if (status < 0)
-            exit(1);
+            return -1;
 
         // Map functions
         session[i].disconnect = usb_disconnect;
