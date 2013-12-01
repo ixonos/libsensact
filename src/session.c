@@ -32,3 +32,4 @@
 #include "session.h"
 
 struct session_t session[MAX_SESSIONS] = {};
+pthread_mutex_t session_mutex = PTHREAD_MUTEX_INITIALIZER;

@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <pthread.h>
 #include "sensact.h"
 #include "session.h"
 #include "packet.h"
@@ -67,6 +68,7 @@ int connect(char *name)
     struct device_t *device = device_list;
 
     debug_printf("Connecting...\n");
+    pthread_mutex_lock(&session_mutex);
 
     // Find a free session entry (i)
     for (i=0; i<MAX_SESSIONS; i++)
@@ -82,7 +84,7 @@ int connect(char *name)
     if (session_available == false)
     {
         printf("Error: Too many active sessions!\n");
-        return -1;
+        goto error;
     }
 
     // Look up device name in list of supported devices
@@ -99,7 +101,7 @@ int connect(char *name)
     if (!device_found)
     {
         printf("Error: Device %s not found!\n", name);
-        return -1;
+        goto error;
     }
 
     // Initialize session
@@ -115,7 +117,9 @@ int connect(char *name)
                 session[i].device->pid,
                 session[i].device->endpoint);
         if (status < 0)
-            return -1;
+            goto error;
+
+        session[i].connected = true;
 
         // Map functions
         session[i].disconnect = usb_disconnect;
@@ -132,13 +136,27 @@ int connect(char *name)
         break;
     }
 
+    // Claim session
+    session[i].allocated = true;
+
+    pthread_mutex_unlock(&session_mutex);
+
     // Return session handle
     return i;
+
+error:
+    pthread_mutex_unlock(&session_mutex);
+    return -1;
 }
 
 int disconnect(int handle)
 {
     session[handle].disconnect(handle);
+
+    pthread_mutex_lock(&session_mutex);
+    session[handle].allocated = false;
+    pthread_mutex_unlock(&session_mutex);
+
     return 0;
 }
 

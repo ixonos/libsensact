@@ -52,7 +52,7 @@ struct device_t devices[] =
 int main(void)
 {
     int handle;
-    int loop=100;
+    int loop=2;
 
     // Test variables/data
     char  char0;
@@ -79,9 +79,11 @@ int main(void)
 
     // Connect to device
     handle = connect("dummy0");
+    if (handle < 0)
+        return -1;
 
     // Run test loop
-    while (loop)
+    while (loop--)
     {
         set_char(handle, "char0", 42, TIMEOUT);
         get_char(handle, "char0", &char0, TIMEOUT);
@@ -110,7 +112,7 @@ int main(void)
         else
             printf("Error: %s\n", sa_error);
 
-//        usleep(1000000);
+        //usleep(1000000);
     }
 
     // Disconnect from device

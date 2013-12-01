@@ -32,6 +32,8 @@
 #ifndef SESSION_H
 #define SESSION_H
 
+#include <stdbool.h>
+#include <pthread.h>
 #include "sensact.h"
 #include "usb.h"
 
@@ -39,7 +41,8 @@
 
 struct session_t
 {
-    char allocated;
+    bool allocated;
+    bool connected;
     struct device_t *device;
     int (*disconnect)(int handle);
     int (*reconnect)(int handle);
@@ -59,5 +62,6 @@ struct session_t
 };
 
 extern struct session_t session[MAX_SESSIONS];
+extern pthread_mutex_t session_mutex;
 
 #endif
