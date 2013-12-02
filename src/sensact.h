@@ -67,22 +67,22 @@ struct device_t
 
 extern char *sa_error;
 
-int register_devices(struct device_t *devices); // Register devices
+int sa_register_devices(struct device_t *devices); // Register devices
 
-int connect(char *name);    // Connect to device with name
-int disconnect(int device); // Disconnect device
-int reconnect(int device);  // Reconnect to device
+int sa_connect(char *name);    // Connect to device with name
+int sa_disconnect(int device); // Disconnect device
+int sa_reconnect(int device);  // Reconnect to device
 
-int get_char(int handle, char *name, char *value, int timeout);   // 8 bit integer value
-int get_short(int handle, char *name, short *value, int timeout); // 16 bit integer value
-int get_int(int handle, char *name, int *value, int timeout);     // 32 bit integer value
-int get_float(int handle, char *name, float *value, int timeout); // 32 bit float value
-int get_data(int handle, char *name, void *data, int *data_size, int timeout); // Up to 1024 bytes of data
+int sa_get_char(int handle, char *name, char *value, int timeout);   // 8 bit integer value
+int sa_get_short(int handle, char *name, short *value, int timeout); // 16 bit integer value
+int sa_get_int(int handle, char *name, int *value, int timeout);     // 32 bit integer value
+int sa_get_float(int handle, char *name, float *value, int timeout); // 32 bit float value
+int sa_get_data(int handle, char *name, void *data, int *data_size, int timeout); // Up to 1024 bytes of data
 
-int set_char(int handle, char *name, char value, int timeout);    // 8 bit integer value
-int set_short(int handle, char *name, short value, int timeout);  // 16 bit integer value
-int set_int(int handle, char *name, int value, int timeout);      // 32 bit integer value
-int set_float(int handle, char *name, float value, int timeout);  // 32 bit float value
-int set_data(int handle, char *name, void *data, int data_size, int timeout); // Up to 1024 bytes of data
+int sa_set_char(int handle, char *name, char value, int timeout);    // 8 bit integer value
+int sa_set_short(int handle, char *name, short value, int timeout);  // 16 bit integer value
+int sa_set_int(int handle, char *name, int value, int timeout);      // 32 bit integer value
+int sa_set_float(int handle, char *name, float value, int timeout);  // 32 bit float value
+int sa_set_data(int handle, char *name, void *data, int data_size, int timeout); // Up to 1024 bytes of data
 
 #endif

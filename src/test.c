@@ -75,39 +75,39 @@ int main(void)
 
 
     // Register known devices
-    register_devices((struct device_t *) &devices);
+    sa_register_devices((struct device_t *) &devices);
 
     // Connect to device
-    handle = connect("dummy0");
+    handle = sa_connect("dummy0");
     if (handle < 0)
         return -1;
 
     // Run test loop
     while (loop--)
     {
-        set_char(handle, "char0", 42, TIMEOUT);
-        get_char(handle, "char0", &char0, TIMEOUT);
+        sa_set_char(handle, "char0", 42, TIMEOUT);
+        sa_get_char(handle, "char0", &char0, TIMEOUT);
         printf("char0 = %d\n", char0);
 
-        set_short(handle, "short0", 4343, TIMEOUT);
-        get_short(handle, "short0", &short0, TIMEOUT);
+        sa_set_short(handle, "short0", 4343, TIMEOUT);
+        sa_get_short(handle, "short0", &short0, TIMEOUT);
         printf("short0 = %d\n", short0);
 
-        set_int(handle, "int0", 444444, TIMEOUT);
-        get_int(handle, "int0", &int0, TIMEOUT);
+        sa_set_int(handle, "int0", 444444, TIMEOUT);
+        sa_get_int(handle, "int0", &int0, TIMEOUT);
         printf("int0 = %d\n", int0);
 
-        set_float(handle, "float0", 45.45, TIMEOUT);
-        get_float(handle, "float0", &float0, TIMEOUT);
+        sa_set_float(handle, "float0", 45.45, TIMEOUT);
+        sa_get_float(handle, "float0", &float0, TIMEOUT);
         printf("float0: %2.2f\n", float0);
 
-        set_data(handle, "data0", &data0, strlen(data0)+1, TIMEOUT);
-        get_data(handle, "data0", &data0_rcv, &data0_size, TIMEOUT);
+        sa_set_data(handle, "data0", &data0, strlen(data0)+1, TIMEOUT);
+        sa_get_data(handle, "data0", &data0_rcv, &data0_size, TIMEOUT);
         printf("data0: %s\n", (char *) &data0_rcv);
         printf("data0 size=%d\n", data0_size);
 
         // Error test (char1 not suppored by device)
-        if (get_char(handle, "char1", &char0, TIMEOUT) == 0)
+        if (sa_get_char(handle, "char1", &char0, TIMEOUT) == 0)
             printf("char1 = %d\n", char0);
         else
             printf("Error: %s\n", sa_error);
@@ -116,7 +116,7 @@ int main(void)
     }
 
     // Disconnect from device
-    disconnect(handle);
+    sa_disconnect(handle);
 
     return 0;
 }

@@ -53,14 +53,14 @@ void init(void)
         session[i].allocated = false;
 }
 
-int register_devices(struct device_t *devices)
+int sa_register_devices(struct device_t *devices)
 {
     device_list = devices;
 
     return 0;
 }
 
-int connect(char *name)
+int sa_connect(char *name)
 {
     int i=0;
     bool session_available=false;
@@ -149,7 +149,7 @@ error:
     return -1;
 }
 
-int disconnect(int handle)
+int sa_disconnect(int handle)
 {
     session[handle].disconnect(handle);
 
@@ -160,7 +160,7 @@ int disconnect(int handle)
     return 0;
 }
 
-int reconnect(int handle)
+int sa_reconnect(int handle)
 {
     return session[handle].reconnect(handle);
 }
@@ -239,54 +239,54 @@ int send_command(
 
 /* Get functions */
 
-int get_char(int handle, char *name, char *value, int timeout)
+int sa_get_char(int handle, char *name, char *value, int timeout)
 {
     return send_command(handle, GET_CHAR, name, (void *) value, NULL, NULL, 0, timeout);
 }
 
-int get_short(int handle, char *name, short *value, int timeout)
+int sa_get_short(int handle, char *name, short *value, int timeout)
 {
     return send_command(handle, GET_SHORT, name, (void *) value, NULL, NULL, 0, timeout);
 }
 
-int get_int(int handle, char *name, int *value, int timeout)
+int sa_get_int(int handle, char *name, int *value, int timeout)
 {
     return send_command(handle, GET_INT, name, (void *) value, NULL, NULL, 0, timeout);
 }
 
-int get_float(int handle, char *name, float *value, int timeout)
+int sa_get_float(int handle, char *name, float *value, int timeout)
 {
     return send_command(handle, GET_FLOAT, name, (void *) value, NULL, NULL, 0, timeout);
 }
 
-int get_data(int handle, char *name, void *data, int *data_size, int timeout)
+int sa_get_data(int handle, char *name, void *data, int *data_size, int timeout)
 {
     return send_command(handle, GET_DATA, name, data, data_size, NULL, 0, timeout);
 }
 
 /* Set functions */
 
-int set_char(int handle, char *name, char value, int timeout)
+int sa_set_char(int handle, char *name, char value, int timeout)
 {
     return send_command(handle, SET_CHAR, name, NULL, NULL, (void *) &value, sizeof(char), timeout);
 }
 
-int set_short(int handle, char *name, short value, int timeout)
+int sa_set_short(int handle, char *name, short value, int timeout)
 {
     return send_command(handle, SET_SHORT, name, NULL, NULL, (void *) &value, sizeof(short), timeout);
 }
 
-int set_int(int handle, char *name, int value, int timeout)
+int sa_set_int(int handle, char *name, int value, int timeout)
 {
     return send_command(handle, SET_INT, name, NULL, NULL, (void *) &value, sizeof(int), timeout);
 }
 
-int set_float(int handle, char *name, float value, int timeout)
+int sa_set_float(int handle, char *name, float value, int timeout)
 {
     return send_command(handle, SET_FLOAT, name, NULL, NULL, (void *) &value, sizeof(float), timeout);
 }
 
-int set_data(int handle, char *name, void *data, int data_size, int timeout)
+int sa_set_data(int handle, char *name, void *data, int data_size, int timeout)
 {
     if (data_size > PACKET_VALUE_MAX_SIZE)
     {
