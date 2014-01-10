@@ -51,7 +51,7 @@ struct device_t devices[] =
 
 int main(void)
 {
-    int handle;
+    int device;
     int loop=2;
 
     // Test variables/data
@@ -78,36 +78,36 @@ int main(void)
     sa_register_devices((struct device_t *) &devices);
 
     // Connect to device
-    handle = sa_connect("dummy0");
-    if (handle < 0)
+    device = sa_connect("dummy0");
+    if (device < 0)
         return -1;
 
     // Run test loop
     while (loop--)
     {
-        sa_set_char(handle, "char0", 42, TIMEOUT);
-        sa_get_char(handle, "char0", &char0, TIMEOUT);
+        sa_set_char(device, "char0", 42, TIMEOUT);
+        sa_get_char(device, "char0", &char0, TIMEOUT);
         printf("char0 = %d\n", char0);
 
-        sa_set_short(handle, "short0", 4343, TIMEOUT);
-        sa_get_short(handle, "short0", &short0, TIMEOUT);
+        sa_set_short(device, "short0", 4343, TIMEOUT);
+        sa_get_short(device, "short0", &short0, TIMEOUT);
         printf("short0 = %d\n", short0);
 
-        sa_set_int(handle, "int0", 444444, TIMEOUT);
-        sa_get_int(handle, "int0", &int0, TIMEOUT);
+        sa_set_int(device, "int0", 444444, TIMEOUT);
+        sa_get_int(device, "int0", &int0, TIMEOUT);
         printf("int0 = %d\n", int0);
 
-        sa_set_float(handle, "float0", 45.45, TIMEOUT);
-        sa_get_float(handle, "float0", &float0, TIMEOUT);
+        sa_set_float(device, "float0", 45.45, TIMEOUT);
+        sa_get_float(device, "float0", &float0, TIMEOUT);
         printf("float0: %2.2f\n", float0);
 
-        sa_set_data(handle, "data0", &data0, strlen(data0)+1, TIMEOUT);
-        sa_get_data(handle, "data0", &data0_rcv, &data0_size, TIMEOUT);
+        sa_set_data(device, "data0", &data0, strlen(data0)+1, TIMEOUT);
+        sa_get_data(device, "data0", &data0_rcv, &data0_size, TIMEOUT);
         printf("data0: %s\n", (char *) &data0_rcv);
         printf("data0 size=%d\n", data0_size);
 
         // Error test (char1 not suppored by device)
-        if (sa_get_char(handle, "char1", &char0, TIMEOUT) == 0)
+        if (sa_get_char(device, "char1", &char0, TIMEOUT) == 0)
             printf("char1 = %d\n", char0);
         else
             printf("Error: %s\n", sa_error);
@@ -116,7 +116,7 @@ int main(void)
     }
 
     // Disconnect from device
-    sa_disconnect(handle);
+    sa_disconnect(device);
 
     return 0;
 }

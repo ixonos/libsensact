@@ -44,10 +44,10 @@ struct session_t
     bool allocated;
     bool connected;
     struct device_t *device;
-    int (*disconnect)(int handle);
-    int (*reconnect)(int handle);
-    int (*write)(int handle, char *data, int length, int timeout);
-    int (*read)(int handle, char *data, int length, int timeout);
+    int (*disconnect)(int device);
+    int (*reconnect)(int device);
+    int (*write)(int device, char *data, int length, int timeout);
+    int (*read)(int device, char *data, int length, int timeout);
 
     /* USB data */
     struct usb_t usb;
@@ -58,7 +58,6 @@ struct session_t
     /* PROFINET data */
     /* BLUETOOTH data */
     /* WIFI data */
-
 };
 
 extern struct session_t session[MAX_SESSIONS];

@@ -51,6 +51,9 @@ void init(void)
     // Initialize session structures
     for (i=0; i<MAX_SESSIONS; i++)
         session[i].allocated = false;
+
+    // Register default backend
+    //sa_register_backend(&usb_backend)
 }
 
 int sa_register_devices(struct device_t *devices)
@@ -70,7 +73,7 @@ int sa_connect(char *name)
     debug_printf("Connecting...\n");
     pthread_mutex_lock(&session_mutex);
 
-    // Find a free session entry (i)
+    // Find a free device session entry (i)
     for (i=0; i<MAX_SESSIONS; i++)
     {
         if (session[i].allocated == false)
@@ -141,7 +144,7 @@ int sa_connect(char *name)
 
     pthread_mutex_unlock(&session_mutex);
 
-    // Return session handle
+    // Return session device handle
     return i;
 
 error:
@@ -149,24 +152,24 @@ error:
     return -1;
 }
 
-int sa_disconnect(int handle)
+int sa_disconnect(int device)
 {
-    session[handle].disconnect(handle);
+    session[device].disconnect(device);
 
     pthread_mutex_lock(&session_mutex);
-    session[handle].allocated = false;
+    session[device].allocated = false;
     pthread_mutex_unlock(&session_mutex);
 
     return 0;
 }
 
-int sa_reconnect(int handle)
+int sa_reconnect(int device)
 {
-    return session[handle].reconnect(handle);
+    return session[device].reconnect(device);
 }
 
 int send_command(
-        int handle,
+        int device,
         int command,
         char *name,
         void *get_value,
@@ -192,12 +195,12 @@ int send_command(
     debug_printf("Packet ID: %d\n", id); // Debug
 
     // Send packet
-    ret = session[handle].write(handle, (char *) &request_packet, packet_length, timeout);
+    ret = session[device].write(device, (char *) &request_packet, packet_length, timeout);
     if (ret < 0 )
         return -1;
 
     // Receive response header
-    ret = session[handle].read(handle, (char *) &response_packet, PACKET_RSP_HEADER_SIZE, timeout);
+    ret = session[device].read(device, (char *) &response_packet, PACKET_RSP_HEADER_SIZE, timeout);
     if (ret < 0 )
         return -1;
 
@@ -207,7 +210,7 @@ int send_command(
         if (response_packet.data_length > 0)
         {
             // Receive response payload
-            ret = session[handle].read(handle, (char *) &data, response_packet.data_length, timeout);
+            ret = session[device].read(device, (char *) &data, response_packet.data_length, timeout);
             if (ret < 0 )
                 return -1;
 
@@ -239,59 +242,59 @@ int send_command(
 
 /* Get functions */
 
-int sa_get_char(int handle, char *name, char *value, int timeout)
+int sa_get_char(int device, char *name, char *value, int timeout)
 {
-    return send_command(handle, GET_CHAR, name, (void *) value, NULL, NULL, 0, timeout);
+    return send_command(device, GET_CHAR, name, (void *) value, NULL, NULL, 0, timeout);
 }
 
-int sa_get_short(int handle, char *name, short *value, int timeout)
+int sa_get_short(int device, char *name, short *value, int timeout)
 {
-    return send_command(handle, GET_SHORT, name, (void *) value, NULL, NULL, 0, timeout);
+    return send_command(device, GET_SHORT, name, (void *) value, NULL, NULL, 0, timeout);
 }
 
-int sa_get_int(int handle, char *name, int *value, int timeout)
+int sa_get_int(int device, char *name, int *value, int timeout)
 {
-    return send_command(handle, GET_INT, name, (void *) value, NULL, NULL, 0, timeout);
+    return send_command(device, GET_INT, name, (void *) value, NULL, NULL, 0, timeout);
 }
 
-int sa_get_float(int handle, char *name, float *value, int timeout)
+int sa_get_float(int device, char *name, float *value, int timeout)
 {
-    return send_command(handle, GET_FLOAT, name, (void *) value, NULL, NULL, 0, timeout);
+    return send_command(device, GET_FLOAT, name, (void *) value, NULL, NULL, 0, timeout);
 }
 
-int sa_get_data(int handle, char *name, void *data, int *data_size, int timeout)
+int sa_get_data(int device, char *name, void *data, int *data_size, int timeout)
 {
-    return send_command(handle, GET_DATA, name, data, data_size, NULL, 0, timeout);
+    return send_command(device, GET_DATA, name, data, data_size, NULL, 0, timeout);
 }
 
 /* Set functions */
 
-int sa_set_char(int handle, char *name, char value, int timeout)
+int sa_set_char(int device, char *name, char value, int timeout)
 {
-    return send_command(handle, SET_CHAR, name, NULL, NULL, (void *) &value, sizeof(char), timeout);
+    return send_command(device, SET_CHAR, name, NULL, NULL, (void *) &value, sizeof(char), timeout);
 }
 
-int sa_set_short(int handle, char *name, short value, int timeout)
+int sa_set_short(int device, char *name, short value, int timeout)
 {
-    return send_command(handle, SET_SHORT, name, NULL, NULL, (void *) &value, sizeof(short), timeout);
+    return send_command(device, SET_SHORT, name, NULL, NULL, (void *) &value, sizeof(short), timeout);
 }
 
-int sa_set_int(int handle, char *name, int value, int timeout)
+int sa_set_int(int device, char *name, int value, int timeout)
 {
-    return send_command(handle, SET_INT, name, NULL, NULL, (void *) &value, sizeof(int), timeout);
+    return send_command(device, SET_INT, name, NULL, NULL, (void *) &value, sizeof(int), timeout);
 }
 
-int sa_set_float(int handle, char *name, float value, int timeout)
+int sa_set_float(int device, char *name, float value, int timeout)
 {
-    return send_command(handle, SET_FLOAT, name, NULL, NULL, (void *) &value, sizeof(float), timeout);
+    return send_command(device, SET_FLOAT, name, NULL, NULL, (void *) &value, sizeof(float), timeout);
 }
 
-int sa_set_data(int handle, char *name, void *data, int data_size, int timeout)
+int sa_set_data(int device, char *name, void *data, int data_size, int timeout)
 {
     if (data_size > PACKET_VALUE_MAX_SIZE)
     {
         sa_error = "Error: Size of data must not exceed 1024 bytes";
         return -1;
     }
-    return send_command(handle, SET_DATA, name, NULL, NULL, data, data_size, timeout);
+    return send_command(device, SET_DATA, name, NULL, NULL, data, data_size, timeout);
 }

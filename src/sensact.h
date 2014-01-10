@@ -73,16 +73,16 @@ int sa_connect(char *name);    // Connect to device with name
 int sa_disconnect(int device); // Disconnect device
 int sa_reconnect(int device);  // Reconnect to device
 
-int sa_get_char(int handle, char *name, char *value, int timeout);   // 8 bit integer value
-int sa_get_short(int handle, char *name, short *value, int timeout); // 16 bit integer value
-int sa_get_int(int handle, char *name, int *value, int timeout);     // 32 bit integer value
-int sa_get_float(int handle, char *name, float *value, int timeout); // 32 bit float value
-int sa_get_data(int handle, char *name, void *data, int *data_size, int timeout); // Up to 1024 bytes of data
+int sa_get_char(int device, char *name, char *value, int timeout);   // 8 bit integer value
+int sa_get_short(int device, char *name, short *value, int timeout); // 16 bit integer value
+int sa_get_int(int device, char *name, int *value, int timeout);     // 32 bit integer value
+int sa_get_float(int device, char *name, float *value, int timeout); // 32 bit float value
+int sa_get_data(int device, char *name, void *data, int *data_size, int timeout); // Up to 1024 bytes of data
 
-int sa_set_char(int handle, char *name, char value, int timeout);    // 8 bit integer value
-int sa_set_short(int handle, char *name, short value, int timeout);  // 16 bit integer value
-int sa_set_int(int handle, char *name, int value, int timeout);      // 32 bit integer value
-int sa_set_float(int handle, char *name, float value, int timeout);  // 32 bit float value
-int sa_set_data(int handle, char *name, void *data, int data_size, int timeout); // Up to 1024 bytes of data
+int sa_set_char(int device, char *name, char value, int timeout);    // 8 bit integer value
+int sa_set_short(int device, char *name, short value, int timeout);  // 16 bit integer value
+int sa_set_int(int device, char *name, int value, int timeout);      // 32 bit integer value
+int sa_set_float(int device, char *name, float value, int timeout);  // 32 bit float value
+int sa_set_data(int device, char *name, void *data, int data_size, int timeout); // Up to 1024 bytes of data
 
 #endif
