@@ -73,18 +73,13 @@ get_*()/set_* functions that will be used.
 The default get_*()/set_*() functions uses the read()/write() functions for
 speaking the sensact binary protocol over any serial channel that the
 communication backend provides. This of course requires that the device itself
-also speaks the senact protocol.
-
-However, in most cases, you have a sensor or actuator device which already
-provides it's own communication protocol. In this case you will simply have to
-implement and register the get_*()/set_*() functions which abstract the use of
-that specific protocol for getting/setting data.
+also speaks the sensact protocol.
 
 Example (backend which registers and uses read/write):
 
 struct sa_backend_t custom_backend =
 {
-    .name = "usb",
+    .name = "custom",
     .connect = custom_connect,
     .disconnect = custom_disconnect,
     .read = custom_read,
@@ -95,13 +90,19 @@ struct sa_backend_t custom_backend =
 if (sa_register_backend(&custom_backend) != SA_OK)
     printf("Error: %s\n", sa_error);
 
-Alternatively, you can register a custom backend which does not use the
-read()/write() functionality by overriding the get_*()/set_*() functions
-(meaning no sensact protocol in use):
+
+However, in most cases, you have a sensor or actuator device which already
+provides it's own communication protocol. In this case you will simply have to
+implement and register the get_*()/set_*() functions which abstract the use of
+that specific protocol for getting/setting specific data. This way the
+read()/write() functions are left unused by the library (meaning no sensact
+protocol in use).
+
+Example (backend which registers get_*()/set_*() functions):
 
 struct sa_backend_t custom_backend =
 {
-    .name = "usb",
+    .name = "custom",
     .connect = custom_connect,
     .disconnect = custom_disconnect,
     .get_char = custom_get_char,
@@ -115,6 +116,11 @@ struct sa_backend_t custom_backend =
     .get_data = custom_get_data,
     .set_data = custom_set_data,
 };
+
+// Register backend
+if (sa_register_backend(&custom_backend) != SA_OK)
+    printf("Error: %s\n", sa_error);
+
 
 TODO: Fill in more details regarding backend registration. For now, the only
 example on a fully implemented backend is the USB backend which is registrered
