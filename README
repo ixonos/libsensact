@@ -80,6 +80,7 @@ Example (backend which registers and uses read/write):
 struct sa_backend_t custom_backend =
 {
     .name = "custom",
+    .description = "Custom communication backend",
     .connect = custom_connect,
     .disconnect = custom_disconnect,
     .read = custom_read,
@@ -103,6 +104,7 @@ Example (backend which registers get_*()/set_*() functions):
 struct sa_backend_t custom_backend =
 {
     .name = "custom",
+    .description = "Custom communication backend",
     .connect = custom_connect,
     .disconnect = custom_disconnect,
     .get_char = custom_get_char,
