@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013, Ixonos Denmark ApS
- * Copyright (c) 2013, Martin Lund
+ * Copyright (c) 2013-2014, Ixonos Denmark ApS
+ * Copyright (c) 2013-2014, Martin Lund
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,8 +31,8 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "packet.h"
-#include "debug.h"
+#include "sensact/packet.h"
+#include "sensact/debug.h"
 
 #ifdef SENSACT_CLIENT
 unsigned short packet_counter = 0;

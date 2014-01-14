@@ -1,13 +1,30 @@
-== libsensact - the sensor/actuator library =====
+== libsensact - the sensor/actuator abstraction library =====
+
 
 1. Introduction
 
-This library provides a simple API for communicating with sensors and actuators
-connected via various connection types.
+This library provides a simple API for communicating data variables with sensor
+and actuator devices connected via various connection types using available or
+custom communication backends. The API is a high level abstraction of sensor
+and actuator devices which should render it possible to support most if not all
+types of sensor and actuator devices. Each device is simply characterized by
+device name and the names of the variables that the device offers for reading
+or writing. The meaning of these variables is fully custom, it can be sensor
+data which can be read, actuator control data which can be set, device
+configuration data, etc..
 
-Currently only USB connections are supported. However, in the future a modular
-communication backend will be supported so that it will be possible to
-integrate with open or proprietary communication backends.
+Additionally, the library provides device session management and offers the
+option of using an efficient low overhead protocol as a mean for communicating
+simple data types with devices.
+
+Currently the library only supports synchronious communication. In the future
+asynchronious event driven communication will be supported by introducing
+additional data subscribe type functions. It is also planned to add functions
+for automatic device and device data discovery.
+
+The library is still work-in-progress so expect things to changes until a
+stable 1.0 release.
+
 
 2. Example application
 
@@ -19,31 +36,95 @@ integrate with open or proprietary communication backends.
 
  /* 
   * This example uses libsensact to fetch roll, pitch, and yaw values from the
-  * "compass0" sensor. The sensor is connected via USB.
+  * "compass0" sensor.
   */
 
  int main(void)
  {
-    int handle;
+    int device;
     int roll, pitch, yaw;
 
-    handle = connect("compass0");
+    device = connect("compass0");
 
-    get_int(handle, "roll", &roll, TIMEOUT);
+    get_int(device, "roll", &roll, TIMEOUT);
     printf("roll:     %03d\n", roll);
 
-    get_int(handle, "pitch", &pitch, TIMEOUT);
+    get_int(device, "pitch", &pitch, TIMEOUT);
     printf("pitch:    %03d\n", pitch);
 
-    get_int(handle, "yaw", &yaw, TIMEOUT);
+    get_int(device, "yaw", &yaw, TIMEOUT);
     printf("yaw:      %03d\n", yaw);
 
-    disconnect(handle);
+    disconnect(device);
 
     return 0;
  }
 
-3. License
+For a more elaborate and detailed example please see src/test.c .
 
-libsensact is released under the BSD-3 license. Please see the COPYING file.
+
+3. Installing a custom communication backend
+
+When installing a custom communication backend one must at minimum implement
+and register the connect()/disconnect() functions found in sensact.h and also
+implement and register either the read()/write() functions or all of the
+get_*()/set_* functions that will be used.
+
+The default get_*()/set_*() functions uses the read()/write() functions for
+speaking the sensact binary protocol over any serial channel that the
+communication backend provides. This of course requires that the device itself
+also speaks the senact protocol.
+
+However, in most cases, you have a sensor or actuator device which already
+provides it's own communication protocol. In this case you will simply have to
+implement and register the get_*()/set_*() functions which abstract the use of
+that specific protocol for getting/setting data.
+
+Example (backend which registers and uses read/write):
+
+struct sa_backend_t custom_backend =
+{
+    .name = "usb",
+    .connect = custom_connect,
+    .disconnect = custom_disconnect,
+    .read = custom_read,
+    .write = custom_write,
+};
+
+// Register backend
+if (sa_register_backend(&custom_backend) != SA_OK)
+    printf("Error: %s\n", sa_error);
+
+Alternatively, you can register a custom backend which does not use the
+read()/write() functionality by overriding the get_*()/set_*() functions
+(meaning no sensact protocol in use):
+
+struct sa_backend_t custom_backend =
+{
+    .name = "usb",
+    .connect = custom_connect,
+    .disconnect = custom_disconnect,
+    .get_char = custom_get_char,
+    .set_char = custom_set_char,
+    .get_short = custom_get_short,
+    .set_short = custom_set_short,
+    .get_int = custom_get_int,
+    .set_int = custom_set_int,
+    .get_float = custom_get_float,
+    .set_float = custom_set_float,
+    .get_data = custom_get_data,
+    .set_data = custom_set_data,
+};
+
+TODO: Fill in more details regarding backend registration. For now, the only
+example on a fully implemented backend is the USB backend which is registrered
+by default by libsensact.
+
+4. License
+
+libsensact is released under the BSD-3 license. Please see the COPYING file for
+license details.
+
+libsensact includes a list implementation (list.c/list.h) which is licensed under
+the MIT license (compatible with BSD-3).
 

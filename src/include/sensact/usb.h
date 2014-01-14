@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013, Ixonos Denmark ApS
- * Copyright (c) 2013, Martin Lund
+ * Copyright (c) 2013-2014, Ixonos Denmark ApS
+ * Copyright (c) 2013-2014, Martin Lund
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,16 +33,24 @@
 #define USB_H
 
 #include <libusb.h>
+#include "sensact/sensact.h"
+
+struct usb_config_t
+{
+    const int vid;
+    const int pid;
+    const int endpoint;
+};
 
 struct usb_t
 {
     struct libusb_device_handle *device;
 };
 
-int usb_connect(struct libusb_device_handle **usb_device, int vid, int pid, int endpoint);
+int usb_connect(int handle, void *config);
 int usb_disconnect(int handle);
-int usb_reconnect(int handle);
 int usb_write(int handle, char *data, int length, int timeout);
 int usb_read(int handle, char *data, int length, int timeout);
 
+extern struct sa_backend_t usb_backend;
 #endif

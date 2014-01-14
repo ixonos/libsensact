@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013, Ixonos Denmark ApS
- * Copyright (c) 2013, Martin Lund
+ * Copyright (c) 2013-2014, Ixonos Denmark ApS
+ * Copyright (c) 2013-2014, Martin Lund
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,59 +30,72 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <libusb.h>
-#include "usb.h"
-#include "session.h"
-#include "debug.h"
+#include "sensact/usb.h"
+#include "sensact/session.h"
+#include "sensact/debug.h"
 
-int usb_connect(struct libusb_device_handle **usb_device, int vid, int pid, int endpoint)
+int usb_connect(int device, void *config)
 {
-    libusb_device_handle *device;
+    struct usb_config_t *usb_config = config;
+    struct usb_t *usb_data;
+
+    usb_data = malloc(sizeof(struct usb_t));
+    session[device].data = usb_data;
+
+    libusb_device_handle *usb_device;
 
     libusb_init(NULL);
 
-    device = libusb_open_device_with_vid_pid(NULL, vid, pid);
+    usb_device = libusb_open_device_with_vid_pid(NULL, usb_config->vid, usb_config->pid);
 
-    if (device != NULL)
+    if (usb_device != NULL)
     {
-        libusb_detach_kernel_driver(device, 0);
+        libusb_detach_kernel_driver(usb_device, 0);
 
-        int claimed = libusb_claim_interface(device, 0);
+        int claimed = libusb_claim_interface(usb_device, 0);
 
         if (claimed == 0)
         {
-            debug_printf("Connected to USB device (vid=%X,pid=%X)\n", vid, pid);
+            debug_printf("Connected to USB device (vid=%X,pid=%X)\n", usb_config->vid, usb_config->pid);
 
             // Store USB device handle for session
-            *usb_device = device;
+            usb_data->device = usb_device;
 
-            return 0;
+            return SA_OK;
         }
 
-        libusb_close(device);
+        libusb_close(usb_device);
     }
 
-    printf("Error: Could not connect USB device (vid=%X,pid=%X)\n", vid, pid);
+    printf("Error: Could not connect USB device (vid=%X,pid=%X)\n", usb_config->vid, usb_config->pid);
 
-    return -1;
+    return SA_ERROR;
 }
 
-int usb_disconnect(int handle)
+int usb_disconnect(int device)
 {
+    struct usb_t *usb_data = session[device].data;
+
     debug_printf("Disconnecting USB device...\n");
 
     // Release USB interface
-    libusb_release_interface(session[handle].usb.device, 0);
-    libusb_close(session[handle].usb.device);
+    libusb_release_interface(usb_data->device, 0);
+    libusb_close(usb_data->device);
 
-    session[handle].connected = false;
+    free(usb_data);
 
-    return 0;
+    session[device].connected = false;
+
+    return SA_OK;
 }
 
-int usb_reconnect(int handle)
+static int usb_reconnect(int device)
 {
+    struct usb_config_t *usb_config = session[device].device->config;
+    struct usb_t *usb_data = session[device].data;
     int ret;
 
     debug_printf("Reconnecting...\n");
@@ -91,19 +104,21 @@ int usb_reconnect(int handle)
     // usleep(100000); // 100 ms
 
     // Only disconnect if connected
-    if (session[handle].connected)
-        ret = usb_disconnect(handle);
+    if (session[device].connected)
+        ret = usb_disconnect(device);
 
-    ret = usb_connect(&session[handle].usb.device, session[handle].device->vid,
-                      session[handle].device->pid, session[handle].device->endpoint);
-    if (ret == 0)
-        session[handle].connected = true;
+    ret = usb_connect(device,session[device].device->config);
+
+    if (ret == SA_OK)
+        session[device].connected = true;
 
     return ret;
 }
 
-int usb_write(int handle, char *data, int length, int timeout)
+int usb_write(int device, char *data, int length, int timeout)
 {
+    struct usb_config_t *usb_config = session[device].device->config;
+    struct usb_t *usb_data = session[device].data;
     int count;
     int ret = LIBUSB_ERROR_OTHER;
     int i;
@@ -115,15 +130,15 @@ int usb_write(int handle, char *data, int length, int timeout)
     debug_printf_raw("\n");
 
     // Write bulk message
-    if (session[handle].connected)
-        ret = libusb_bulk_transfer(session[handle].usb.device,
-                                   session[handle].device->endpoint | LIBUSB_ENDPOINT_OUT,
+    if (session[device].connected)
+        ret = libusb_bulk_transfer(usb_data->device,
+                                   usb_config->endpoint | LIBUSB_ENDPOINT_OUT,
                                    (unsigned char *) data, length,
                                    &count, timeout);
 
     // If device disconnected try reconnect once
-    if ((ret == LIBUSB_ERROR_NO_DEVICE) || (ret == LIBUSB_ERROR_IO) || !session[handle].connected)
-        ret = usb_reconnect(handle);
+    if ((ret == LIBUSB_ERROR_NO_DEVICE) || (ret == LIBUSB_ERROR_IO) || !session[device].connected)
+        ret = usb_reconnect(device);
 
     if (ret == LIBUSB_SUCCESS)
         return count;
@@ -134,22 +149,24 @@ int usb_write(int handle, char *data, int length, int timeout)
     }
 }
 
-int usb_read(int handle, char *data, int length, int timeout)
+int usb_read(int device, char *data, int length, int timeout)
 {
+    struct usb_config_t *usb_config = session[device].device->config;
+    struct usb_t *usb_data = session[device].data;
     int count;
     int ret = LIBUSB_ERROR_OTHER;
     int i;
 
     // Read bulk message
-    if (session[handle].connected)
-        ret = libusb_bulk_transfer(session[handle].usb.device,
-                                   session[handle].device->endpoint | LIBUSB_ENDPOINT_IN,
+    if (session[device].connected)
+        ret = libusb_bulk_transfer(usb_data->device,
+                                   usb_config->endpoint | LIBUSB_ENDPOINT_IN,
                                    (unsigned char *) data, length,
                                    &count, timeout);
 
     // If device disconnected try reconnect once
-    if ((ret == LIBUSB_ERROR_NO_DEVICE) || (ret == LIBUSB_ERROR_IO) || !session[handle].connected)
-        ret = usb_reconnect(handle);
+    if ((ret == LIBUSB_ERROR_NO_DEVICE) || (ret == LIBUSB_ERROR_IO) || !session[device].connected)
+        ret = usb_reconnect(device);
 
     // Debug
     debug_printf("Received data, %d bytes (USB): ", count);
@@ -165,3 +182,12 @@ int usb_read(int handle, char *data, int length, int timeout)
         return -1;
     }
 }
+
+struct sa_backend_t usb_backend =
+{
+    .name = "usb",
+    .connect = usb_connect,
+    .disconnect = usb_disconnect,
+    .read = usb_read,
+    .write = usb_write,
+};

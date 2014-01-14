@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013, Ixonos Denmark ApS
- * Copyright (c) 2013, Martin Lund
+ * Copyright (c) 2013-2014, Ixonos Denmark ApS
+ * Copyright (c) 2013-2014, Martin Lund
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,38 +29,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SESSION_H
-#define SESSION_H
+#ifndef DEBUG_H
+#define DEBUG_H
 
-#include <stdbool.h>
-#include <pthread.h>
-#include "sensact.h"
-#include "usb.h"
-
-#define MAX_SESSIONS 40
-
-struct session_t
-{
-    bool allocated;
-    bool connected;
-    struct device_t *device;
-    int (*disconnect)(int device);
-    int (*reconnect)(int device);
-    int (*write)(int device, char *data, int length, int timeout);
-    int (*read)(int device, char *data, int length, int timeout);
-
-    /* USB data */
-    struct usb_t usb;
-
-    /* ETHERCAT data */
-    /* CAN data */
-    /* PROFIBUS data */
-    /* PROFINET data */
-    /* BLUETOOTH data */
-    /* WIFI data */
-};
-
-extern struct session_t session[MAX_SESSIONS];
-extern pthread_mutex_t session_mutex;
+#ifdef DEBUG
+#define debug_printf(format, args...) \
+    fprintf (stdout, "[sensact] " format, ## args)
+#define debug_printf_raw(format, args...) \
+    fprintf (stdout, "" format, ## args)
+#else
+#define debug_printf(format, args...)
+#define debug_printf_raw(format, args...)
+#endif
 
 #endif

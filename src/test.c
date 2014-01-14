@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013, Ixonos Denmark ApS
- * Copyright (c) 2013, Martin Lund
+ * Copyright (c) 2013-2014, Ixonos Denmark ApS
+ * Copyright (c) 2013-2014, Martin Lund
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,19 +30,27 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include "sensact.h"
+#include "sensact/sensact.h"
+#include "sensact/usb.h"
 
 /* List of supported sensor/actuator devices */
-struct device_t devices[] =
+
+struct usb_config_t usb_dummy0_config =
+{
+      .vid = 0x1CBE,
+      .pid = 0x0040,
+      .endpoint = 0x1,
+};
+
+struct sa_device_t devices[] =
 {
    {  .name = "dummy0",
       .description = "TI Tiva Launchpad device (dummy)",
-      .connection = USB,
-      .vid = 0x1CBE,
-      .pid = 0x0040,
-      .endpoint = 0x1 },
+      .backend = "usb",
+      .config = &usb_dummy0_config },
 
    { }
 };
@@ -52,7 +60,8 @@ struct device_t devices[] =
 int main(void)
 {
     int device;
-    int loop=2;
+    int loop=10;
+    char backends[400];
 
     // Test variables/data
     char  char0;
@@ -75,7 +84,11 @@ int main(void)
 
 
     // Register known devices
-    sa_register_devices((struct device_t *) &devices);
+    sa_register_devices((struct sa_device_t *) &devices);
+
+    // List available backends
+    sa_list_backends((char *) &backends);
+    printf("Available sensact communication backends: %s\n", backends);
 
     // Connect to device
     device = sa_connect("dummy0");
@@ -107,12 +120,12 @@ int main(void)
         printf("data0 size=%d\n", data0_size);
 
         // Error test (char1 not suppored by device)
-        if (sa_get_char(device, "char1", &char0, TIMEOUT) == 0)
+        if (sa_get_char(device, "char1", &char0, TIMEOUT) == SA_OK)
             printf("char1 = %d\n", char0);
         else
             printf("Error: %s\n", sa_error);
 
-        //usleep(1000000);
+        usleep(100000);
     }
 
     // Disconnect from device

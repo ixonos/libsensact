@@ -3,11 +3,11 @@
 #
 
 CC=gcc
-CFLAGS=-Wall -lusb -fPIC -DVERSION=$(VERSION) `pkg-config libusb-1.0 --cflags` -Wno-unused-variable -DSENSACT_CLIENT
+CFLAGS=-Wall -lusb -fPIC -DVERSION=$(VERSION) `pkg-config libusb-1.0 --cflags` -Wno-unused-variable -DSENSACT_CLIENT -I./include
 LDFLAGS=-lsensact `pkg-config libusb-1.0 --libs` -L.
-VERSION=0.2
+VERSION=0.3
 
-objects = sensact.o session.o usb.o packet.o
+objects = sensact.o session.o usb.o packet.o list.o
      
 all: libsensact.so
      
