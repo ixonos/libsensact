@@ -61,7 +61,7 @@ enum
 #define TI_TEMP_WR_HND                  0x29
 
 
-typedef int (*Msg_Hdl) (unsigned char *buff, int length, double *value);
+typedef int (*Msg_Hdl) (unsigned char *buff, int length, void *value);
 
 // GATT-attribute characteristic
 typedef const struct CHAR_DEF
@@ -77,7 +77,7 @@ typedef const struct CHAR_DEF
 } char_dev;
 
 
-int TI_sensortag_temperature(unsigned char *buff, int length, double *value);
+int TI_sensortag_temperature(unsigned char *buff, int length, void *value);
 int find_att_handle(/*session_manuf,*/ char *feature, bool data_config, unsigned int uuid, unsigned int *hnd, unsigned char *property, Msg_Hdl *handler);
 
 #endif

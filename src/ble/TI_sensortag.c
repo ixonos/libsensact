@@ -12,14 +12,14 @@ static const struct CHAR_DEF char_table[]=
 {
     {   {'D','e','v',0},      READ_SENSOR, DEVICE_NAME_UUID,             ATT_RD,                 TI_DEVICE_NAME_HND,   NULL},
     {   {'T','e','m','p',0},  ENABLE_SENSOR, IR_TEMPERATURE_CONFIG_UUID, ATT_WR_NO_RSP,          TI_TEMP_WR_HND,       NULL},
-    {   {'T','e','m','p',0},  READ_SENSOR, IR_TEMPERATURE_DATA_UUID,     ATT_RD,                 TI_TEMP_RD_HND,       /*(double)*/ ((Msg_Hdl*) &TI_sensortag_temperature)},
-    {   {0},                    0,         0,                                    0,                      0,                    0}
+    {   {'T','e','m','p',0},  READ_SENSOR, IR_TEMPERATURE_DATA_UUID,     ATT_RD,                 TI_TEMP_RD_HND,       ((Msg_Hdl*) &TI_sensortag_temperature)},
+    {   {0},                  0,           0,                            0,                      0,                    0}
 } ;
 
 int find_att_handle(/*session_manuf,*/ char *feature, bool data_config, unsigned int uuid, 
 		    unsigned int *hnd, unsigned char *property, Msg_Hdl *handler)
 {
-    // find handle of the attribute by symbolic feature (e.g. 'temp') and device specific 16-bit uuid,
+    // find handle of the attribute by symbolic feature (e.g. 'temp')
     // and return handle and property of this attribute
 
     struct CHAR_DEF const * char_ptr;
@@ -84,7 +84,7 @@ printf("tObj = %.*f\n", 18, tObj);*/
     return tObj;
 }
 
-int TI_sensortag_temperature(unsigned char *buff, int length, double *value)
+int TI_sensortag_temperature(unsigned char *buff, int length, void *value)
 {
     double ambient = 0;
     double target = 0;
@@ -99,7 +99,8 @@ int TI_sensortag_temperature(unsigned char *buff, int length, double *value)
 
     printf("Temperature: ambient: %lf [°C], target: %lf [°C]\n", ambient, target);
 
-    *value = target;
+    if (value != NULL)
+        memcpy(value, &target, sizeof(double));
 
     return 0;  // return later also ambient !
 }
