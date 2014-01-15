@@ -1,6 +1,8 @@
 #include <syslog.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
+#include <regex.h>
 #include "ble.h"
 
 /*unsigned char encoded_request[][8] = { 	
@@ -17,21 +19,60 @@
 		   	   };
 */
 
-// BLE data
-char ble_addr[18] = "BC:6A:29:AB:41:36";
-
 #define TIMEOUT 2 // sec
 
+int validate_ble_address(const char* address) {
+	regex_t regex;
+	int reti, verdict = 0;
+	char buffer[100];
+
+	/* Compile regular expression */
+	reti = regcomp(&regex, "^([0-9A-F]{2}[:-]){5}[0-9A-F]{2}", REG_ICASE | REG_EXTENDED);
+	if (reti) {
+		fprintf(stderr, "Could not compile regex\n");
+	}
+
+	/* Execute regular expression */
+	reti = regexec(&regex, address, 0, NULL, 0);
+	if (!reti) {
+		verdict = 1;
+	} else if (reti == REG_NOMATCH) {
+	} else {
+		regerror(reti, &regex, buffer, sizeof(buffer));
+		fprintf(stderr, "Regex match failed: %s\n", buffer);
+	}
+
+	regfree(&regex);
+
+	return verdict;
+}
 
 int main(int argc, const char* argv[]) {
 
-    int i, ret;
+    int i, ret, paramloc = 0,found = 0;
     double double_val;
+
+    for(i=0; i<argc;i++) {
+        if(strcmp(argv[i], "-a") == 0 && !found) {
+            found = 1;
+            paramloc = i+1;
+            if(!validate_ble_address(argv[paramloc])) {
+                fprintf(stderr, "ble-address is not valid: %s\n", argv[paramloc]);
+                return 1;
+            }
+        }
+    }
+
+    if(!found) {
+        fprintf(stderr, "Usage: %s -a BLE_ADDRESS\n", argv[0]);
+        return 0;
+    }
+
 
     openlog("l2cap-ble", LOG_PID, LOG_DAEMON);
     syslog(LOG_ERR, "l2cap-ble starting");
 
-    ble_connect(ble_addr);
+    ble_connect((char *)argv[paramloc]);
 
 //*********************************************************
 //discoverServices();
@@ -40,6 +81,7 @@ int main(int argc, const char* argv[]) {
 
 
     // run tests
+
     for (i = 0; i < 10; i++)
     {
 	printf("********************************************************************\n");
@@ -47,6 +89,7 @@ int main(int argc, const char* argv[]) {
 	printf("ret: %d, sensor value: %lf\n", ret, double_val);
 	sleep(3);
     }
+
 /*
 // run tests
     for (i = 0; i < sizeof(encoded_request)/sizeof(encoded_request[0]); i++)
