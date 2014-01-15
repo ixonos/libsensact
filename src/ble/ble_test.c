@@ -17,16 +17,22 @@
 		   	   };
 */
 
-// BLE data
-char ble_addr[18] = "BC:6A:29:AB:41:36";
-
 #define TIMEOUT 2 // sec
 
 
 int main(int argc, const char* argv[]) {
 
+    char ble_addr[18]; // e.g. "BC:6A:29:AB:41:36"
     int i, ret;
     double double_val;
+
+    if(argc < 2)
+    {
+        fprintf(stderr, "usage: %s <bt_addr>\n", argv[0]);
+        exit(2);
+    }
+
+    strncpy(ble_addr, argv[1], sizeof(ble_addr));
 
     openlog("l2cap-ble", LOG_PID, LOG_DAEMON);
     syslog(LOG_ERR, "l2cap-ble starting");

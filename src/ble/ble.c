@@ -16,7 +16,6 @@
 
 
 struct ble_t ble;
-unsigned char l2capSockBuf[256];
 
 struct sockaddr_l2 {
   sa_family_t    l2_family;
@@ -29,7 +28,7 @@ struct sockaddr_l2 {
 
 // Notice: _l2cap_socket-functions are based on Sandeep Mistry's code published in 'https://github.com/sandeepmistry/noble/tree/master/src'
 
-int ble_read_l2cap_socket(/*int handle,*/ unsigned char *data, int length, int timeout)
+int ble_read_l2cap_socket(/*int handle,*/ unsigned char *data, int buff_len, int timeout)
 {
     fd_set rfds;
     struct timeval tv;
@@ -49,8 +48,8 @@ int ble_read_l2cap_socket(/*int handle,*/ unsigned char *data, int length, int t
 
 	if (FD_ISSET(ble.l2capSock, &rfds)) {
 	    // received data from the socket
-	    // read data-octets (maximum octets to read == length, where lenght should be sizeof buffer)
-	    len = read(ble.l2capSock, data, length);
+	    // read data-octets (maximum octets to read == buff_len, where lenght should be sizeof buffer)
+	    len = read(ble.l2capSock, data, buff_len);
 
 	    if (len < 0) {
 	      printf("Bad data from capSock\n");
@@ -198,8 +197,8 @@ void discoverServices(void)
 	EncReadByGroupRequest(buff, &length, start_hdl, end_hdl, GATT_PRIM_SVC_UUID);
 	ble_write_l2cap_socket(/*int handle,*/ buff, length, 10);
 
-	length = ble_read_l2cap_socket(/*int handle,*/ l2capSockBuf, sizeof(l2capSockBuf), 10);
-	DecReadByGroupResponse(l2capSockBuf, length, &start_hdl);
+	length = ble_read_l2cap_socket(/*int handle,*/ buff, sizeof(buff), 10);
+	DecReadByGroupResponse(buff, length, &start_hdl);
     }
 }
 
@@ -258,7 +257,7 @@ int ble_get_float(char *feature, double *value, int timeout)
         return -1;
 
     // call valid manufacturer specific response-handler
-    ret = ( (*msg_handler_ptr)(&buff[index], length, value) );
+    ret = ( (*msg_handler_ptr)(&buff[index], length, (void*) value) );
 
     return 0;
 
