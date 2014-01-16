@@ -36,12 +36,22 @@
 #include "sensact/sensact.h"
 #include "sensact/usb.h"
 
+#define TIMEOUT 100 // ms
+#define DUMMY1
+
 /* List of supported sensor/actuator devices */
 
 struct usb_config_t usb_dummy0_config =
 {
       .vid = 0x1CBE,
       .pid = 0x0040,
+      .endpoint = 0x1,
+};
+
+struct usb_config_t usb_dummy1_config =
+{
+      .vid = 0x1CBE,
+      .pid = 0x0050,
       .endpoint = 0x1,
 };
 
@@ -52,17 +62,16 @@ struct sa_device_t devices[] =
       .backend = "usb",
       .config = &usb_dummy0_config },
 
+   {  .name = "dummy1",
+      .description = "TI Tiva Launchpad device (dummy)",
+      .backend = "usb",
+      .config = &usb_dummy1_config },
+
    { }
 };
 
-#define TIMEOUT 100 // ms
-
-int main(void)
+void dummy_test(int device)
 {
-    int device;
-    int loop=10;
-    char backends[400];
-
     // Test variables/data
     char  char0;
     short short0;
@@ -82,6 +91,40 @@ int main(void)
     char data0_rcv[1024];
     int  data0_size;
 
+    sa_set_char(device, "char0", 42, TIMEOUT);
+    sa_get_char(device, "char0", &char0, TIMEOUT);
+    printf("char0 = %d\n", char0);
+
+    sa_set_short(device, "short0", 4343, TIMEOUT);
+    sa_get_short(device, "short0", &short0, TIMEOUT);
+    printf("short0 = %d\n", short0);
+
+    sa_set_int(device, "int0", 444444, TIMEOUT);
+    sa_get_int(device, "int0", &int0, TIMEOUT);
+    printf("int0 = %d\n", int0);
+
+    sa_set_float(device, "float0", 45.45, TIMEOUT);
+    sa_get_float(device, "float0", &float0, TIMEOUT);
+    printf("float0: %2.2f\n", float0);
+
+    sa_set_data(device, "data0", &data0, strlen(data0)+1, TIMEOUT);
+    sa_get_data(device, "data0", &data0_rcv, &data0_size, TIMEOUT);
+    printf("data0: %s\n", (char *) &data0_rcv);
+    printf("data0 size=%d\n", data0_size);
+
+    // Error test (char1 not known by device)
+    if (sa_get_char(device, "char1", &char0, TIMEOUT) == SA_OK)
+        printf("char1 = %d\n", char0);
+    else
+        printf("Error: %s\n", sa_error);
+}
+
+
+int main(void)
+{
+    int dummy0, dummy1;
+    int loop=100000;
+    char backends[400];
 
     // Register known devices
     sa_register_devices((struct sa_device_t *) &devices);
@@ -90,46 +133,32 @@ int main(void)
     sa_list_backends((char *) &backends);
     printf("Available sensact communication backends: %s\n", backends);
 
-    // Connect to device
-    device = sa_connect("dummy0");
-    if (device < 0)
+    // Connect to device(s)
+    dummy0 = sa_connect("dummy0");
+    if (dummy0 < 0)
         return -1;
+
+#ifdef DUMMY1
+    dummy1 = sa_connect("dummy1");
+    if (dummy1 < 0)
+        return -1;
+#endif
 
     // Run test loop
     while (loop--)
     {
-        sa_set_char(device, "char0", 42, TIMEOUT);
-        sa_get_char(device, "char0", &char0, TIMEOUT);
-        printf("char0 = %d\n", char0);
-
-        sa_set_short(device, "short0", 4343, TIMEOUT);
-        sa_get_short(device, "short0", &short0, TIMEOUT);
-        printf("short0 = %d\n", short0);
-
-        sa_set_int(device, "int0", 444444, TIMEOUT);
-        sa_get_int(device, "int0", &int0, TIMEOUT);
-        printf("int0 = %d\n", int0);
-
-        sa_set_float(device, "float0", 45.45, TIMEOUT);
-        sa_get_float(device, "float0", &float0, TIMEOUT);
-        printf("float0: %2.2f\n", float0);
-
-        sa_set_data(device, "data0", &data0, strlen(data0)+1, TIMEOUT);
-        sa_get_data(device, "data0", &data0_rcv, &data0_size, TIMEOUT);
-        printf("data0: %s\n", (char *) &data0_rcv);
-        printf("data0 size=%d\n", data0_size);
-
-        // Error test (char1 not suppored by device)
-        if (sa_get_char(device, "char1", &char0, TIMEOUT) == SA_OK)
-            printf("char1 = %d\n", char0);
-        else
-            printf("Error: %s\n", sa_error);
-
+        dummy_test(dummy0);
+#ifdef DUMMY1
+        dummy_test(dummy1);
+#endif
         usleep(100000);
     }
 
-    // Disconnect from device
-    sa_disconnect(device);
+    // Disconnect from device(s)
+    sa_disconnect(dummy0);
+#ifdef DUMMY1
+    sa_disconnect(dummy1);
+#endif
 
     return 0;
 }
