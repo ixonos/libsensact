@@ -29,21 +29,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef USB_H
-#define USB_H
+#ifndef USB_CONFIG_H
+#define USB_CONFIG_H
 
-#include <libusb.h>
-#include "sensact/sensact.h"
-
-struct usb_t
+struct usb_config_t
 {
-    struct libusb_device_handle *device;
+    const int vid;
+    const int pid;
+    const int endpoint;
 };
 
-int usb_connect(int handle, void *config);
-int usb_disconnect(int handle);
-int usb_write(int handle, char *data, int length, int timeout);
-int usb_read(int handle, char *data, int length, int timeout);
-
-extern struct sa_backend_t usb_backend;
 #endif

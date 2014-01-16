@@ -34,7 +34,7 @@
 #include <unistd.h>
 #include <string.h>
 #include "sensact/sensact.h"
-#include "sensact/usb.h"
+#include "sensact/usb_config.h"
 
 #define TIMEOUT 100 // ms
 #define DUMMY1
