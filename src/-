@@ -1,0 +1,56 @@
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+
+#include "sens_emulator_engine.h"
+
+
+char direction = 0;
+engine_t * engine;
+
+engine_t *create_emulator_engine(int vid_engine) {
+
+	engine = malloc(sizeof(engine_t));
+	if (engine != NULL) {
+		engine->direction = 1;
+		engine->direction_name = "direction";
+		engine->setdirection = setdirection;
+		engine->getvalue = engine_getval;
+		engine->rpm = 1000;
+		engine->rpm_name = "rpm";
+		engine->setrpm = setrpm;
+		engine->point = 1000;
+		engine->setpoint = setpoint;
+		engine->setpoint_name = "setpoint";
+
+	}
+	return engine;
+}
+
+void engine_getval(const char * name, char *data, size_t size){
+
+}
+
+void setrpm(int newrpm) {
+	engine->rpm = newrpm;
+}
+
+int getrpm(){
+	return engine->rpm;
+}
+
+void setpoint(int newpoint){
+	engine->point = newpoint;
+}
+
+int getpoint(){
+	return engine->point;
+}
+
+void setdirection(char newdirection){
+	engine->direction = newdirection;
+}
+
+char getdirection(){
+	return engine->direction;
+}

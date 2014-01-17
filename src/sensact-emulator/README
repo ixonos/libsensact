@@ -1,0 +1,14 @@
+A Test framework and some emulated sensors.
+
+The build target test-emulator will build a executable that can connect to the server and run tests against the UI.
+Emulated sensors are added to the server topology of connected sensors. The backend is called "emulator".
+Emulated sensors are build as part of the "libsensact.so" currently.
+To run the emulator set the library path as: export LD_LIBRARY_PATH=.
+
+If the tests are not run the emulated engine will react on UI input for example the Motor speed control.
+If the tests are run with ./emulator the framework will start executing a series of test.
+
+The emulated sensors are manipulated via shared memory and the not set and get functions for the sensors them self.
+The shared memory is setup as the initial part of the test suite. If this fails for some reason you will see the 
+"setup failed!" message in the terminal.
+
