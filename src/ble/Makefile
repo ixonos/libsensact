@@ -6,9 +6,9 @@ CC=gcc
 CFLAGS=-Wall -lbluetooth -fPIC -Wno-unused-variable
 LDFLAGS=-lbluetooth -lm
 
-objects = ble_test.o ble.o TI_sensortag.o gatt_att.o
+objects = ble.o TI_sensortag.o gatt_att.o
      
-all: ble_test
+all: ble_demo
      
 debug: CFLAGS += -DDEBUG -g
 debug: all
@@ -16,10 +16,13 @@ debug: all
 $(objects): %.o: %.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
-ble_test: $(objects)
-	$(CC) -Wall $(objects) -o ble_test $(LDFLAGS)
+ble_demo: $(objects) ble_demo.o
+	$(CC) -Wall $(objects) ble_demo.o -o ble_demo $(LDFLAGS)
 
+ble_test: $(objects) ble_test.o
+	$(CC) -Wall $(objects) ble_test.o -o ble_test $(LDFLAGS)
+	
 clean:
-	rm -f *.o ble_test
+	rm -f *.o ble_demo ble_test
 
 .PHONY: all clean debug
