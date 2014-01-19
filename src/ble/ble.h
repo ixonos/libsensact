@@ -19,5 +19,6 @@ int ble_disconnect(/*int handle*/);
 int ble_reconnect(int handle);
 int ble_write(/*int handle,*/ unsigned char *data, int length, int timeout);
 int ble_read(/*int handle,*/ unsigned char *data, int length, int timeout);
+int ble_validate_address(const char* address);
 
 #endif

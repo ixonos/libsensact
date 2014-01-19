@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <syslog.h>
 #include <math.h>
+#include <regex.h>
 
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
@@ -290,6 +291,32 @@ int ble_connect(char *ble_addr)
 int ble_disconnect(void)
 {
     return ble_disconnect_l2cap_socket();
+}
+
+int ble_validate_address(const char* address) {
+	regex_t regex;
+	int reti, verdict = 0;
+	char buffer[100];
+
+	/* Compile regular expression */
+	reti = regcomp(&regex, "^([0-9A-F]{2}[:]){5}[0-9A-F]{2}", REG_ICASE | REG_EXTENDED);
+	if (reti) {
+		fprintf(stderr, "Could not compile regex\n");
+	}
+
+	/* Execute regular expression */
+	reti = regexec(&regex, address, 0, NULL, 0);
+	if (!reti) {
+		verdict = 1;
+	} else if (reti == REG_NOMATCH) {
+	} else {
+		regerror(reti, &regex, buffer, sizeof(buffer));
+		fprintf(stderr, "Regex match failed: %s\n", buffer);
+	}
+
+	regfree(&regex);
+
+	return verdict;
 }
 
 

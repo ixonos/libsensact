@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <regex.h>
 #include "ble.h"
 
 /*unsigned char encoded_request[][8] = { 	
@@ -21,32 +20,6 @@
 
 #define TIMEOUT 2 // sec
 
-int validate_ble_address(const char* address) {
-	regex_t regex;
-	int reti, verdict = 0;
-	char buffer[100];
-
-	/* Compile regular expression */
-	reti = regcomp(&regex, "^([0-9A-F]{2}[:]){5}[0-9A-F]{2}", REG_ICASE | REG_EXTENDED);
-	if (reti) {
-		fprintf(stderr, "Could not compile regex\n");
-	}
-
-	/* Execute regular expression */
-	reti = regexec(&regex, address, 0, NULL, 0);
-	if (!reti) {
-		verdict = 1;
-	} else if (reti == REG_NOMATCH) {
-	} else {
-		regerror(reti, &regex, buffer, sizeof(buffer));
-		fprintf(stderr, "Regex match failed: %s\n", buffer);
-	}
-
-	regfree(&regex);
-
-	return verdict;
-}
-
 int main(int argc, const char* argv[]) {
 
     int i, ret, paramloc = 0,found = 0;
@@ -56,7 +29,7 @@ int main(int argc, const char* argv[]) {
         if(strcmp(argv[i], "-a") == 0 && !found) {
             found = 1;
             paramloc = i+1;
-            if(!validate_ble_address(argv[paramloc])) {
+            if(!ble_validate_address(argv[paramloc])) {
                 fprintf(stderr, "ble-address is not valid: %s\n", argv[paramloc]);
                 return 1;
             }
