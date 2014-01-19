@@ -3,6 +3,10 @@
 #include <string.h>
 #include <unistd.h>
 #include "ble.h"
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/hci.h>
+#include <bluetooth/hci_lib.h>
+
 
 #define TIMEOUT 2 // sec
 
@@ -30,6 +34,53 @@ typedef struct ble_conn_t
     int state;
     int rw_retry_cnt;
 } BLE_CONN_T;
+
+void ble_scan(void)
+{
+    int dd, err, dev_id;
+    uint8_t own_type = 0x00;
+    uint8_t scan_type = 0x01;
+    uint8_t filter_policy = 0x00;
+    uint16_t interval = htobs(0x0010);
+    uint16_t window = htobs(0x0010);
+    uint8_t filter_dup = 1;
+
+    // Open first available hci device
+    dev_id = hci_get_route(NULL);
+    dd = hci_open_dev(dev_id);
+    if (dd < 0)
+    {
+        perror("Could not open device");
+        return;
+    }
+
+    err = hci_le_set_scan_parameters(dd, scan_type, interval, window,
+                                     own_type, filter_policy, 1000);
+    if (err < 0)
+    {
+        perror("Set scan parameters failed");
+        goto error;
+    }
+
+    // Start scan
+    err = hci_le_set_scan_enable(dd, 0x01, filter_dup, 1000);
+    if (err < 0)
+    {
+        perror("Enable scan failed");
+        goto error;
+    }
+
+    printf("LE Scan ...\n");
+    sleep(3);
+
+    // End scan
+    err = hci_le_set_scan_enable(dd, 0x00, filter_dup, 1000);
+    if (err < 0)
+        perror("Disable scan failed");
+
+error:
+    hci_close_dev(dd);
+}
 
 // This demo-program in simple way to adapt ble-interface to sensact-platform
 
@@ -65,6 +116,10 @@ void update_loop(float *temperature)
 	    case BLE_STATE_NOT_CONNECTED:
 	    {
 		printf("--------------------------------------------------------------------------\n");
+
+        // LE scan before connect (fixes "no route to host")
+        ble_scan();
+
 		ret = ble_connect(ble_conn.ble_addr);
 
 		if (ret < 0) // connection establishment failed
@@ -116,7 +171,7 @@ void update_loop(float *temperature)
 			ble_conn.state = BLE_STATE_WF_READ; // try still reading
 		}
 		else { // succesfull reading
-		    memcpy(temperature, &double_val, sizeof(temperature));  // send outside
+            *temperature = (float) double_val;
 		    ble_conn.state = BLE_STATE_WF_READ;
 		}
 	    }
@@ -136,7 +191,7 @@ void update_loop(float *temperature)
 
 int main(void) {
 
-    float ble_temp; // temperature
+    float ble_temp = 0; // temperature
 
     update_loop(&ble_temp);
     // never reached
