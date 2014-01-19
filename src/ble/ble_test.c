@@ -27,7 +27,7 @@ int validate_ble_address(const char* address) {
 	char buffer[100];
 
 	/* Compile regular expression */
-	reti = regcomp(&regex, "^([0-9A-F]{2}[:-]){5}[0-9A-F]{2}", REG_ICASE | REG_EXTENDED);
+	reti = regcomp(&regex, "^([0-9A-F]{2}[:]){5}[0-9A-F]{2}", REG_ICASE | REG_EXTENDED);
 	if (reti) {
 		fprintf(stderr, "Could not compile regex\n");
 	}
