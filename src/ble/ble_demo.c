@@ -10,8 +10,9 @@
 
 #define TIMEOUT 2 // sec
 
-#define BLE_RW_RETRYCNT    5  // retrials for failed readings/writings to the ble-device
+#define BLE_RW_RETRYCNT    5 // retrials for failed readings/writings to the ble-device
 #define BLE_READ_INTERVAL  3 // seconds
+#define BLE_SCAN_TIME      3 // seconds
 
 //#define BLE_RECONN_RETRYCNT   10
 #define BLE_RECONN_INTERVAL  5 // seconds
@@ -71,7 +72,7 @@ void ble_scan(void)
     }
 
     printf("LE Scan ...\n");
-    sleep(3);
+    sleep(BLE_SCAN_TIME);
 
     // End scan
     err = hci_le_set_scan_enable(dd, 0x00, filter_dup, 1000);
@@ -111,81 +112,81 @@ void update_loop(float *temperature)
 
     while(1) // endless loop
     {
-	switch (ble_conn.state)
-	{
-	    case BLE_STATE_NOT_CONNECTED:
-	    {
-		printf("--------------------------------------------------------------------------\n");
+        switch (ble_conn.state)
+        {
+            case BLE_STATE_NOT_CONNECTED:
+                {
+                    printf("--------------------------------------------------------------------------\n");
 
-        // LE scan before connect (fixes "no route to host")
-        ble_scan();
+                    // LE scan before connect (fixes "no route to host")
+                    ble_scan();
 
-		ret = ble_connect(ble_conn.ble_addr);
+                    ret = ble_connect(ble_conn.ble_addr);
 
-		if (ret < 0) // connection establishment failed
-		    ble_conn.state = BLE_STATE_WF_RECONN;
-		else 
-		    ble_conn.state = BLE_STATE_CONNECTED;
-	    }
-	    break;
-	
-	    case BLE_STATE_CONNECTED:
-	    {
-	        printf("ble connected\n");
-		ble_conn.state = BLE_STATE_READ;
-	    }
-	    break;
+                    if (ret < 0) // connection establishment failed
+                        ble_conn.state = BLE_STATE_WF_RECONN;
+                    else
+                        ble_conn.state = BLE_STATE_CONNECTED;
+                }
+                break;
 
-	    case BLE_STATE_WF_RECONN: // wait for the next reading
-	    {
-		printf("Wait for reconnection-period (%ds) to be elapsed...\n", BLE_RECONN_INTERVAL);
-		sleep(BLE_RECONN_INTERVAL);
-		ble_conn.state = BLE_STATE_NOT_CONNECTED;
-	    }
-	    break;
+            case BLE_STATE_CONNECTED:
+                {
+                    printf("ble connected\n");
+                    ble_conn.state = BLE_STATE_READ;
+                }
+                break;
 
-	    case BLE_STATE_WF_READ: // wait for the next reading
-	    {
-		printf("Wait for reading-period (%ds) to be elapsed...\n", BLE_READ_INTERVAL);
-		sleep(BLE_READ_INTERVAL);
-		ble_conn.state = BLE_STATE_READ;
-	    }
-	    break;
+            case BLE_STATE_WF_RECONN: // wait for the next reading
+                {
+                    printf("Wait for reconnection-period (%ds) to be elapsed...\n", BLE_RECONN_INTERVAL);
+                    sleep(BLE_RECONN_INTERVAL);
+                    ble_conn.state = BLE_STATE_NOT_CONNECTED;
+                }
+                break;
 
-	    case BLE_STATE_READ:
-	    {
-		double_val = 0;
+            case BLE_STATE_WF_READ: // wait for the next reading
+                {
+                    printf("Wait for reading-period (%ds) to be elapsed...\n", BLE_READ_INTERVAL);
+                    sleep(BLE_READ_INTERVAL);
+                    ble_conn.state = BLE_STATE_READ;
+                }
+                break;
 
-		ret = ble_get_float("Temp", &double_val, TIMEOUT);
-		printf("ret: %d, sensor value: %lf\n", ret, double_val);
-		printf("--------------------------------------------------------------------------\n");
-		
-		if (ret < 0) {
-		    ble_conn.rw_retry_cnt ++;
+            case BLE_STATE_READ:
+                {
+                    double_val = 0;
 
-		    if (ble_conn.rw_retry_cnt == BLE_RW_RETRYCNT) {
-			ble_conn.state = BLE_STATE_DISCONNECTED; // time to disconnect
-			ble_conn.rw_retry_cnt = 0; // new retrials
-		    }
-		    else 
-			ble_conn.state = BLE_STATE_WF_READ; // try still reading
-		}
-		else { // succesfull reading
-            *temperature = (float) double_val;
-		    ble_conn.state = BLE_STATE_WF_READ;
-		}
-	    }
-	    break;
+                    ret = ble_get_float("Temp", &double_val, TIMEOUT);
+                    printf("ret: %d, sensor value: %lf\n", ret, double_val);
+                    printf("--------------------------------------------------------------------------\n");
 
-	    case BLE_STATE_DISCONNECTED: // wait for the next reading
-	    {
-		printf("Disconnect\n");
-		ble_disconnect();
-		ble_conn.state = BLE_STATE_WF_RECONN;
-	    }
-	    break;
+                    if (ret < 0) {
+                        ble_conn.rw_retry_cnt ++;
 
-	}
+                        if (ble_conn.rw_retry_cnt == BLE_RW_RETRYCNT) {
+                            ble_conn.state = BLE_STATE_DISCONNECTED; // time to disconnect
+                            ble_conn.rw_retry_cnt = 0; // new retrials
+                        }
+                        else
+                            ble_conn.state = BLE_STATE_WF_READ; // try still reading
+                    }
+                    else { // succesfull reading
+                        *temperature = (float) double_val;
+                        ble_conn.state = BLE_STATE_WF_READ;
+                    }
+                }
+                break;
+
+            case BLE_STATE_DISCONNECTED: // wait for the next reading
+                {
+                    printf("Disconnect\n");
+                    ble_disconnect();
+                    ble_conn.state = BLE_STATE_WF_RECONN;
+                }
+                break;
+
+        }
     }
 }
 
