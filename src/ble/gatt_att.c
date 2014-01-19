@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "gatt_att.h"
 
 unsigned short read_uint16_le(unsigned char *buff, int offset)
@@ -48,7 +49,7 @@ int DecReadByGroupResponse(unsigned char *data, unsigned int length, unsigned sh
 	start_handle = read_uint16_le(data, 2 + i * type + 0);
 	end_handle = read_uint16_le(data, 2 + i * type + 2);
         uuid = read_uint16_le(data, 2 + i * type + 4);
-	printf("start_hdl: 0x%x, end_handle: 0x%x, uuid: 0x%x\n", start_handle, end_handle, uuid);
+	printf("start_hdl: 0x%x, end_handle: 0x%x, uuid: 0x%x\n", start_handle, end_handle, (unsigned int) uuid);
     }
     *end_hdl = end_handle;
 
