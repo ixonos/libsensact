@@ -67,18 +67,27 @@ void EncReadByGroupRequest(unsigned char *buff, int *length, unsigned short star
     *length = 7;
 }
 
-void EncWriteCommand(unsigned char *buff, unsigned short hdl, unsigned char data, int *length) // encode write-request PDU
+void EncWriteCommand(unsigned char *buff, unsigned short hdl, unsigned char *data, int *total_length, int payload_length) // encode write-request PDU
 {
-    int i;
+    // parameters:
+    // - buff: data encoded in this buffer (function calling EncWriteCommand MUST take care, buffer is properly allocated)
+    // - hdl: attribute character handle
+    // - data: payload data (function calling EncWriteCommand MUST take care, that buffer is properly allocated)
+    // - total_length: total number of octets for encoded data
+    // - payload_length: total number of octets for payload data
+    int i, length = 0;
 
-    buff[0] = ATT_OP_WRITE_CMD;
-    write_uint16_le(hdl, buff, 1);
+    buff[0] = ATT_OP_WRITE_CMD; // write commad
+    length++;
 
-//    for (i = 0; i < length; i++)
-//        buff[3 + i] = * (data ++);
+    write_uint16_le(hdl, buff, 1); // attribute-handle in little endian-format (two bytes)
+    length +=2;
 
-    buff[3] = data;
-    *length = 4;
+    // payload data
+    for (i = 0; i < payload_length; i++, length++, data++)
+        buff[length + i] = data[i];
+
+    *total_length = length;
 }
 
 void EncReadRequest(unsigned char *buff, unsigned short hdl, int *length) // encode read-request PDU
@@ -91,7 +100,7 @@ void EncReadRequest(unsigned char *buff, unsigned short hdl, int *length) // enc
 
 int DecReadResponse(unsigned char *buff, unsigned int *dec_buff_index, int *length) // decode read-response PDU
 {
-    if (buff[0] == ATT_OP_READ_RESP && *length >=2) // simple check: OP-code valid and length >= (OP-code + one attribute-octet)
+    if (buff[0] == ATT_OP_READ_RESP && *length >=2) // simple check: OP-code valid and length >= (OP-code + one payload-octet)
     {
 	// just assign buff-pointer index to start from first attribute-octet
         // (there could be '0 to (ATT_MTU–1)' octets, and if the attribute value is longer than
@@ -102,6 +111,15 @@ int DecReadResponse(unsigned char *buff, unsigned int *dec_buff_index, int *leng
         *dec_buff_index = 1;
 	(*length) --;
 	return 0;
+    }
+    else if (buff[0] == ATT_OP_HANDLE_NOTIFY && *length >=4) // simple check: OP-code valid and length >= (OP-code + 2-octet handle + one payload-octet)
+    {
+        printf("--------------------Notification-----------------\n");
+	// For notifications, also attribute-character handle is received. So correct response message-handle could be selected.
+	// BUT: NOT supported yet! Just skip the handle.
+        *dec_buff_index = 3;
+	*length -=3;
+        return 0;
     }
     else
         return -1; // bad response op-code

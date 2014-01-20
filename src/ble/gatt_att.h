@@ -21,7 +21,7 @@ short convert_int16_le(unsigned char *buff, int offset);
 
 int DecReadByGroupResponse(unsigned char *data, unsigned int length, unsigned short *end_hdl);
 void EncReadByGroupRequest(unsigned char *buff, int *length, unsigned short start_hdl, unsigned short end_hdl, unsigned short groupUuid);
-void EncWriteCommand(unsigned char *buff, unsigned short hdl, unsigned char data, int *length);
+void EncWriteCommand(unsigned char *buff, unsigned short hdl, unsigned char *data, int *total_length, int payload_length);
 void EncReadRequest(unsigned char *buff, unsigned short hdl, int *length);
 int DecReadResponse(unsigned char *buff, unsigned int *dec_buff_index, int *length);
 

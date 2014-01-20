@@ -6,6 +6,7 @@
 #include <syslog.h>
 #include <math.h>
 #include <regex.h>
+#include <sys/time.h>
 
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
@@ -27,16 +28,27 @@ struct sockaddr_l2 {
   uint8_t        l2_bdaddr_type;
 };
 
+inline double getFractionalSeconds(void) {
+   struct timeval tv;
+   double time_stamp;
+
+   gettimeofday(&tv, NULL);
+   time_stamp = (double) tv.tv_sec + (double) 1e-6 * tv.tv_usec; 
+
+   // return seconds.microseconds since epoch 
+   return(time_stamp);
+}
 
 // Notice: _l2cap_socket-functions are based on Sandeep Mistry's code published in 'https://github.com/sandeepmistry/noble/tree/master/src'
 
-int ble_read_l2cap_socket(/*int handle,*/ unsigned char *data, int buff_len, int timeout)
+int ble_read_l2cap_socket(/*int handle,*/ unsigned char *data, int buff_len, int timeout, double *receive_time)
 {
     fd_set rfds;
     struct timeval tv;
 
     int len = -1;
     int i, result;
+    double time_stamp = 0; // time stapm of the recievd message
 
     FD_ZERO(&rfds);
     FD_SET(ble.l2capSock, &rfds);
@@ -68,14 +80,22 @@ int ble_read_l2cap_socket(/*int handle,*/ unsigned char *data, int buff_len, int
 	  syslog(LOG_ERR, "Bad data from socket, error: %s\n", (len == -1) ? strerror(errno) : "undefined");
 	  return -1;
 	}
+	
+	time_stamp = getFractionalSeconds();
+	
+	if (receive_time != NULL)
+	    *receive_time = time_stamp;
 
+/*
 	printf("Received data, %d bytes (BLE): ", len);
 	//syslog(LOG_ERR, "Received data (BLE):\n");
 	for(i = 0; i < len; i++) {
 	    printf( "0x%x ", ((int)data[i]) );
 	    //syslog( LOG_ERR, "0x%x", ((int)data[i]) );
 	}
+	printf("         time stamp: %lf [seconds.microseconds]\n", time_stamp);
 	printf("\n");
+*/
 	return len;
     }
     else // this condition shouldn't be reached
@@ -88,12 +108,12 @@ int ble_write_l2cap_socket(/*int handle,*/ unsigned char *data, int length, int 
 {
     int len;
     int i;
-
+/*
     printf("Sending data,  %d bytes (BLE): ", length);
     for (i = 0; i < length; i++)
         printf("0x%x ", (unsigned char) data[i]);
     printf("\n");
-
+*/
     len = write(ble.l2capSock, data, length);
     if (len < 0) {
 	printf("error in writing on socket\n");
@@ -218,12 +238,12 @@ void discoverServices(void)
 	EncReadByGroupRequest(buff, &length, start_hdl, end_hdl, GATT_PRIM_SVC_UUID);
 	ble_write_l2cap_socket(/*int handle,*/ buff, length, 10);
 
-	length = ble_read_l2cap_socket(/*int handle,*/ buff, sizeof(buff), 10);
+	length = ble_read_l2cap_socket(/*int handle,*/ buff, sizeof(buff), 10, NULL);
 	DecReadByGroupResponse(buff, length, &start_hdl);
     }
 }
 
-int ble_read_val(unsigned short handle, unsigned char *buff, unsigned int buff_len, unsigned int *index, int *length, int timeout)
+int ble_read_val(unsigned short handle, unsigned char *buff, unsigned int buff_len, unsigned int *index, int *length, int timeout, double *time_stamp)
 {
     int len = 0;
     int ret;
@@ -234,7 +254,7 @@ int ble_read_val(unsigned short handle, unsigned char *buff, unsigned int buff_l
     if (ret < 0) // problems with writing to the device
 	return -1;
 
-    len = ble_read_l2cap_socket(/*int handle,*/ buff, buff_len, timeout);
+    len = ble_read_l2cap_socket(/*int handle,*/ buff, buff_len, timeout, time_stamp);
 
     if (len <= 0) // problems with reading from the device
 	return -1;
@@ -247,41 +267,145 @@ int ble_read_val(unsigned short handle, unsigned char *buff, unsigned int buff_l
 
 int ble_enable_sensor(unsigned short handle, unsigned char flag, int timeout)
 {
-    int length = 0;
-    unsigned char buff[30];
+    int total_length = 0, payload_length = 0;
+    unsigned char buff[10]; // buffer for encoded request frame (corresponding to ATT-protocol)
+    unsigned char payload_data_buff[5];
 
-    EncWriteCommand(buff, handle, flag, &length);
+    memset(buff, 0, sizeof(buff));
+    memset(payload_data_buff, 0, sizeof(payload_data_buff));
 
-    return ble_write_l2cap_socket(/*int handle,*/ buff, length, timeout);
+    payload_data_buff[0] = flag; // TRUE/FALSE
+    payload_length = 1;
+
+    EncWriteCommand(buff, handle, payload_data_buff, &total_length, payload_length);
+
+    return ble_write_l2cap_socket(/*int handle,*/ buff, total_length, timeout);
 }
 
-int ble_get_float(char *feature, double *value, int timeout)
+int ble_enable_notifications(unsigned short handle, unsigned char flag, int timeout)
+{
+    int total_length = 0, payload_length = 0;
+    unsigned char notif_buff[10]; // buffer for encoded request frame (corresponding to ATT-protocol)
+    unsigned char payload_data_buff[5];
+
+    memset(notif_buff, 0, sizeof(notif_buff));
+    memset(payload_data_buff, 0, sizeof(payload_data_buff));
+
+    // sensorTag can be enabled to send notifications for every sensor by writing “01 00” / disabled by “00 00”
+    payload_data_buff[0] = flag; // TRUE/FALSE
+    payload_data_buff[1] = 0x00;
+    payload_length = 2;
+
+    EncWriteCommand(&notif_buff[0], handle, &payload_data_buff[0], &total_length, payload_length);
+
+    return ble_write_l2cap_socket(/*int handle,*/ &notif_buff[0], total_length, timeout);
+}
+
+int ble_set_measuring_period(unsigned short handle, unsigned char input, int timeout)
+{
+    int total_length = 0, payload_length = 0;
+    unsigned char mp_buff[10]; // buffer for encoded request frame (corresponding to ATT-protocol)
+    unsigned char payload_data_buff[3];
+
+    memset(mp_buff, 0, sizeof(mp_buff));
+    memset(payload_data_buff, 0, sizeof(payload_data_buff));
+
+    payload_data_buff[0] = input; // period = [input*10]ms
+    payload_length = 1;
+
+    EncWriteCommand(&mp_buff[0], handle, &payload_data_buff[0], &total_length, payload_length);
+
+    return ble_write_l2cap_socket(/*int handle,*/ &mp_buff[0], total_length, timeout);
+}
+
+int ble_get_string(char *feature, char *value, int timeout, double *time_stamp)
+{
+   unsigned int data_handle;
+   int length = 0, ret = 0;
+   unsigned char buff[100];
+   unsigned index = 0; // start-address after response-decoding
+   unsigned char property;
+   Msg_Hdl msg_handler_ptr;
+
+   memset(buff, 0, sizeof(buff));
+
+   if (find_att_handle(/*session_manuf,*/ feature, READ_SENSOR, 0, &data_handle, &property, &msg_handler_ptr) < 0)
+        return -1; // handle not found
+
+    ret = ble_read_val(data_handle, buff, sizeof(buff), &index, &length, timeout, time_stamp);
+
+    if (ret < 0)
+        return -1;
+
+    memcpy(value, buff, length + 1);
+
+    return 0;
+}
+
+int ble_get_float(char *feature, double *value1, double *value2, double *value3, int timeout, double *time_stamp)
 {
     unsigned int data_handle, conf_handle;
     unsigned char property;
     int length = 0;
     unsigned char buff[30];
     unsigned index = 0; // start-address after response-decoding
-    int ret;
+    int ret = 0;
     Msg_Hdl msg_handler_ptr;
 
-    if (find_att_handle(/*session_manuf,*/ feature, ENABLE_SENSOR, 0, &conf_handle, &property, NULL) < 0)
-	return -1; // handle not found
+    if (find_att_handle(/*session_manuf,*/ feature, READ_SENSOR, 0, &data_handle, &property, &msg_handler_ptr) < 0)
+        return -1; // handle not found
 
     if (ble.sensor_status == 0) // sensor is disabled
     {
-        ret = ble_enable_sensor(conf_handle, 1, timeout); // trigger sensor-measurement by enabling the sensor
+	if (find_att_handle(/*session_manuf,*/ feature, ENABLE_SENSOR, 0, &conf_handle, &property, NULL) < 0)
+	    return -1; // handle not found
+
+        if (!strcmp(feature, "gyroscope")) {
+            //ret = ble_enable_notifications(0x0F, 1, timeout); // general notifications seem not to be needed enabled specifically
+	    ret = ble_enable_notifications(data_handle + 0x01, 1, timeout);
+	    if (ret < 0)
+                return -1;
+	    usleep(500000);
+
+	    // Trigger sensor-measurement by enabling 'x/y/z'-axis sensors.
+	    // 1 to enable X axis only, 2 to enable Y axis only, 3 = X and Y, 4 = Z only, 5 = X and Z, 6 = Y and Z, 7 = X, Y and Z
+	    ret = ble_enable_sensor(conf_handle, 7, timeout);
+	}
+	else if (!strcmp(feature, "magnetom")) {
+	    ret = ble_enable_notifications(data_handle + 0x01, 0x01, timeout);
+	    if (ret < 0)
+                return -1;
+	    usleep(500000);
+
+	    ret = ble_enable_sensor(conf_handle, 1, timeout); // trigger sensor-measurement by enabling the sensor
+	    if (ret < 0)
+                return -1;
+	    usleep(500000);
+
+	    ret = ble_set_measuring_period(conf_handle + 0x03, 0x14, timeout); // set 200 ms (default period: 0xc8 = 200 [ms] -> 200 ms * 10 = 2 sec)
+    	    if (ret < 0)
+                return -1;
+	}
+	else if (!strcmp(feature, "accelero")) {
+	    ret = ble_enable_sensor(conf_handle, 1, timeout); // trigger sensor-measurement by enabling the sensor
+	    if (ret < 0)
+                return -1;
+	    usleep(500000);
+
+	    ret = ble_set_measuring_period(conf_handle + 0x03, 0x14, timeout); // set 200 ms (default period: 1s)
+    	    if (ret < 0)
+                return -1;
+	}
+	else
+	    ret = ble_enable_sensor(conf_handle, 1, timeout); // trigger sensor-measurement by enabling the sensor
 
         if (ret < 0)
             return -1;
 
-        sleep(1); // set some time for the measurement to finalize
+        sleep(1); // set some time for the enabling of the sensor to finalize
     }
 
-    if (find_att_handle(/*session_manuf,*/ feature, READ_SENSOR, 0, &data_handle, &property, &msg_handler_ptr) < 0)
-	return -1; // handle not found
-
-    ret = ble_read_val(data_handle, buff, sizeof(buff), &index, &length, timeout);
+    ret = ble_read_val(data_handle, buff, sizeof(buff), &index, &length, timeout, time_stamp);
 
 //    ble_enable_sensor(conf_handle, 0); // disable the sensor after the measurement
 //    sleep(1);
@@ -291,7 +415,7 @@ int ble_get_float(char *feature, double *value, int timeout)
     ble.sensor_status = 1;
 
     // call valid manufacturer specific response-handler
-    ret = ( (*msg_handler_ptr)(&buff[index], length, (void*) value) );
+    ret = ( (*msg_handler_ptr)(&buff[index], length, (void*) value1, (void*) value2, (void*) value3, time_stamp) );
 
     return 0;
 

@@ -307,7 +307,7 @@ void update_loop(char *ble_addr, float *temperature)
             case BLE_STATE_READ:
                 {
                     double_val = 0;
-                    ret = ble_get_float("Temp", &double_val, TIMEOUT);
+                    ret = ble_get_float("Temp", &double_val, NULL, NULL, TIMEOUT, NULL);
                     printf("ret: %d, sensor value: %lf\n", ret, double_val);
                     printf("--------------------------------------------------------------------------\n");
 
