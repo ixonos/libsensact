@@ -37,10 +37,9 @@
 #include <time.h>
 #include "sensact_emulator_engine.h"
 
-#define SIG SIGRTMIN
-#define CLOCKID CLOCK_REALTIME
 
-void *shared_mem = (void*) 0;
+
+void *shared_mem_engine = (void*) 0;
 engine_t * engine;
 int shmid;
 engine_t *create_emulator_engine() {
@@ -51,8 +50,8 @@ engine_t *create_emulator_engine() {
 		printf("shmget failed\n");
 	}
 
-	shared_mem = shmat(shmid, (void *) 0, 0);
-	engine = (engine_t*) shared_mem;
+	shared_mem_engine = shmat(shmid, (void *) 0, 0);
+	engine = (engine_t*) shared_mem_engine;
 
 	if (engine != NULL) {
 		engine->setdirection = setdirection;
@@ -63,7 +62,6 @@ engine_t *create_emulator_engine() {
 		engine->rpm_name = "rpm";
 		engine->getrpm = getrpm;
 		engine->setrpm = setrpm;
-
 	}
 	return engine;
 }
@@ -79,7 +77,6 @@ void setrpm(int newrpm) {
 }
 
 int getrpm(void) {
-
 	return engine->rpm;
 }
 

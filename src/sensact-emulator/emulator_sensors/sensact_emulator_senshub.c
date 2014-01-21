@@ -126,7 +126,6 @@ void setlight(float light) {
 }
 
 float getpresure() {
-
 	return senshub->presure;
 }
 void setpresure(float presure) {

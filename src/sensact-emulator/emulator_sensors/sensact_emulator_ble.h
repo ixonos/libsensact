@@ -29,15 +29,37 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef EMULATOR_CONFIG_H
-#define EMULATOR_CONFIG_H
-#define emulator_bluetooth_lowenergy_device "ble_device"
-#define emulator_engine "engine_device"
-#define emulator_senshub "senshub_device"
+#ifndef SENS_EMULATOR_BLE_H_
+#define SENS_EMULATOR_BLE_H_
+#define shared_memory_ble 1236
 
-typedef struct
-{
-  char *name;
-}emulator_config_t;
+/**
+ *A little engine, with rpm and motor direction
+ */
+typedef struct {
+	float temp;
+	const char * temp_name;
+	void (*settemp)(float rpm);
+	float (*gettemp)(void);
 
-#endif
+} ble_t;
+
+/**
+ * call to create a engine
+ */
+ble_t *create_emulator_ble();
+/**
+ * destroy and detach memory
+ */
+void destroy_ble_emulator(void);
+/**
+ * set temperature
+ */
+void settemp(float temp);
+/*
+ * get temperature
+ */
+float gettemp(void);
+
+
+#endif /* SENS_EMULATOR_BLE_H_ */

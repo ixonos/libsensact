@@ -38,30 +38,28 @@
 #include <sys/shm.h>
 #include "include/sensact/packet.h"
 #include "include/sensact/sensact.h"
+#include "include/sensact/emulator_config.h"
 #include "sensact-emulator/emulator_sensors/sensact_emulator_engine.h"
 #include "sensact-emulator/emulator_sensors/sensact_emulator_senshub.h"
+#include "sensact-emulator/emulator_sensors/sensact_emulator_ble.h"
 #include "include/sensact/sensact-emulator.h"
 
+//packet ID
 int32_t id = 0;
 
 const char * var = "";
 /**
- * handles returned on connect
- */
-enum sensors {
-	vid_senshub = 0, vid_engine
-};
-
-/**
  * Handles used for read/write
  */
-enum handles {
-	pid_engine = 1, pid_senshub = 2
-};
-
+int handle_engine = -1;
+int handle_senshub = -1;
+int handle_ble = -1;
+/*
+ * sensors
+ */
 engine_t *engine;
 senshub_t *senshub;
-
+ble_t *bledevice;
 /**
  * modify the direction of the engine
  */
@@ -110,7 +108,6 @@ size_t engine_setint(const char * name, struct request_packet_t *req) {
  */
 size_t engine_setchar(const char * name, struct request_packet_t *req) {
 	size_t retval = 0;
-
 	if (!strcmp(name, engine->direction_name)) {
 		retval = set_direction(req);
 	}
@@ -135,7 +132,6 @@ void engine_read(const char * name, char *data, size_t size) {
 		int rpm = engine->getrpm();
 		memcpy(data, &rpm, size);
 	}
-
 }
 /**
  * set roll to the senshub
@@ -181,9 +177,7 @@ size_t senshub_setlight(struct request_packet_t *req) {
 size_t senshub_setpresure(struct request_packet_t *req) {
 	float presure = 0;
 	memcpy(&presure, &req->data[req->name_length], req->value_length);
-
 	senshub->setpresure(presure);
-	printf("set preasure %f \n", presure);
 	return req->value_length;
 }
 /**
@@ -214,6 +208,13 @@ size_t senshub_sethumidity(struct request_packet_t *req) {
 	senshub->sethumidity(humidity);
 	return req->value_length;
 }
+
+void ble_device_read(const char *name, char *data, size_t size) {
+	if (!strcmp(name, bledevice->temp_name)) {
+		float bletemp = bledevice->gettemp();
+		memcpy(data, &bletemp, size);
+	}
+}
 /**
  * read vars from the senshub
  */
@@ -221,7 +222,6 @@ void senshub_read(const char * name, char *data, size_t size) {
 	if (!strcmp(name, senshub->ambtemp_name)) {
 		float ambtemp = senshub->getambtemp();
 		memcpy(data, &ambtemp, size);
-
 	}
 	if (!strcmp(name, senshub->humidity_name)) {
 		float humidity = senshub->gethumidity();
@@ -251,40 +251,37 @@ void senshub_read(const char * name, char *data, size_t size) {
 		uint32_t yaw = senshub->getyaw();
 		memcpy(data, &yaw, size);
 	}
-
 }
 /**
  * connect to the sensor from device_id
  */
 int emulator_connect(int device_id, void *device) {
-	int retval = 0;
-	switch (device_id) {
-	case vid_engine:
+	int retval = 1;
+	emulator_config_t *dev = (emulator_config_t*) device;
+	char *devicename = dev->name;
+	if (!(strcmp(devicename, emulator_bluetooth_lowenergy_device))) {
+		bledevice = create_emulator_ble();
+		handle_ble = device_id;
+		retval = 0;
+	}
+	if (!(strcmp(devicename, emulator_engine))) {
 		engine = create_emulator_engine();
-		break;
-	case vid_senshub:
+		handle_engine = device_id;
+		retval = 0;
+	}
+	if (!(strcmp(devicename, emulator_senshub))) {
 		senshub = create_senshub_emulator();
-		break;
+		handle_senshub = device_id;
+		retval = 0;
 	}
 	return retval;
 }
 
 int emulator_disconnect(int handle) {
-	switch (handle) {
-	case pid_senshub:
-		destroy_senshub_emulator();
-		break;
-	case pid_engine:
-		destroy_engine_emulator();
-	default:
-		break;
-
-	}
 	return 1;
 }
 
 int emulator_reconnect(int handle) {
-
 	return 1;
 }
 
@@ -312,17 +309,15 @@ size_t senshub_setfloat(const char * name, struct request_packet_t *req) {
 	}
 
 	if (!strcmp(name, senshub->presure_name)) {
-
 		retval = senshub_setpresure(req);
 	}
-
 	return retval;
-
 }
 /**
  * set a int to senshub
  */
 size_t senshub_setint(const char * name, struct request_packet_t *req) {
+
 	size_t retval = 0;
 	if (!strcmp(name, senshub->pitch_name)) {
 		retval = senshub_setpitch(req);
@@ -334,7 +329,6 @@ size_t senshub_setint(const char * name, struct request_packet_t *req) {
 	if (!strcmp(name, senshub->yaw_name)) {
 		retval = senshub_setyaw(req);
 	}
-
 	return retval;
 }
 
@@ -357,6 +351,7 @@ int emulator_write(int handle, char *data, int length, int timeout) {
 	name[name_length] = 0;
 
 	var = name;
+
 	enum command_t code = (int) req->command_code;
 	switch (code) {
 	case GET_CHAR:
@@ -368,36 +363,22 @@ int emulator_write(int handle, char *data, int length, int timeout) {
 		break;
 	case SET_DATA:
 	case SET_FLOAT:
-		switch (handle) {
-		case pid_senshub:
+		if (handle == handle_senshub) {
 			senshub_setfloat(var, req);
-			break;
-		case pid_engine:
-		default:
-			break;
-
 		}
 		break;
-
 	case SET_CHAR:
-		switch (handle) {
-		case pid_engine:
+		if (handle == handle_engine) {
 			engine_setchar(var, req);
-			break;
-		case pid_senshub:
-			break;
 		}
 		break;
 	case SET_INT:
-		switch (handle) {
-		case pid_engine:
+		if (handle == handle_engine) {
 			engine_setint(var, req);
-			break;
-		case pid_senshub:
-			senshub_setint(var, req);
-			break;
 		}
-		break;
+		if (handle == handle_senshub) {
+			senshub_setint(var, req);
+		}
 	}
 	return length;
 }
@@ -406,6 +387,7 @@ int emulator_write(int handle, char *data, int length, int timeout) {
  */
 size_t getlenght(const char * var) {
 	size_t size = 0;
+
 	if (engine != NULL) {
 		if (!strcmp(var, engine->direction_name)) {
 			size = sizeof(char);
@@ -439,7 +421,11 @@ size_t getlenght(const char * var) {
 		if (!strcmp(var, senshub->yaw_name)) {
 			size = sizeof(int);
 		}
-
+	}
+	if (bledevice != NULL) {
+		if (!strcmp(var, bledevice->temp_name)) {
+			size = sizeof(float);
+		}
 	}
 	return size;
 }
@@ -448,6 +434,7 @@ size_t getlenght(const char * var) {
  */
 int emulator_read(int handle, char *data, int length, int timeout) {
 	size_t size = getlenght(var);
+
 	if (length == PACKET_RSP_HEADER_SIZE) {
 		struct response_packet_t *response = (struct response_packet_t*) data;
 		response->prefix = PACKET_PREFIX;
@@ -457,13 +444,14 @@ int emulator_read(int handle, char *data, int length, int timeout) {
 		response->data_length = getlenght(var);
 	} else {
 		size_t size = getlenght(var);
-		switch (handle) {
-		case pid_engine:
+		if (handle == handle_engine) {
 			engine_read(var, data, size);
-			break;
-		case pid_senshub:
+		}
+		if (handle == handle_senshub) {
 			senshub_read(var, data, size);
-			break;
+		}
+		if (handle == handle_ble) {
+			ble_device_read(var, data, size);
 		}
 	}
 	return size;

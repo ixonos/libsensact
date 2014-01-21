@@ -7,7 +7,7 @@ CFLAGS=-Wall -lusb -fPIC -DVERSION=$(VERSION) `pkg-config libusb-1.0 --cflags` -
 LDFLAGS=-lsensact `pkg-config libusb-1.0 --libs` -L.
 VERSION=0.3
 
-objects = list.o sensact.o session.o usb.o packet.o sensact-emulator.o sensact-emulator/emulator_sensors/sensact_emulator_engine.o sensact-emulator/emulator_sensors/sensact_emulator_senshub.o  sensact-emulator/emulator_tests/sensact-emulator-test.o
+objects = list.o sensact.o session.o usb.o packet.o sensact-emulator.o sensact-emulator/emulator_sensors/sensact_emulator_ble.o sensact-emulator/emulator_sensors/sensact_emulator_engine.o sensact-emulator/emulator_sensors/sensact_emulator_senshub.o  sensact-emulator/emulator_tests/sensact-emulator-test.o
      
 all: libsensact.so
      

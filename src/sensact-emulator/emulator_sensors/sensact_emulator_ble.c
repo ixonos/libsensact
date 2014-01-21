@@ -28,16 +28,53 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/shm.h>
+#include <time.h>
+#include "sensact_emulator_ble.h"
 
-#ifndef EMULATOR_CONFIG_H
-#define EMULATOR_CONFIG_H
-#define emulator_bluetooth_lowenergy_device "ble_device"
-#define emulator_engine "engine_device"
-#define emulator_senshub "senshub_device"
 
-typedef struct
-{
-  char *name;
-}emulator_config_t;
+void *shared_mem = (void*) 0;
+ble_t * ble_device;
+int shmid;
+ble_t *create_emulator_ble() {
 
-#endif
+	shmid = shmget((key_t) shared_memory_ble, sizeof(ble_t),
+			0666 | IPC_CREAT);
+	if (shmid == -1) {
+		printf("shmget failed\n");
+	}
+
+	shared_mem = shmat(shmid, (void *) 0, 0);
+	ble_device = (ble_t*) shared_mem;
+
+	if (ble_device != NULL) {
+		ble_device->gettemp = gettemp;
+		ble_device->settemp = settemp;
+		ble_device->temp = 10;
+		ble_device->temp_name = "bleTemp";
+
+	}
+
+	return ble_device;
+}
+/**
+ * detach memory
+ */
+void destroy_ble_emulator(){
+
+}
+
+void settemp(float temp) {
+	ble_device->temp = temp;
+}
+
+float gettemp(void) {
+	return ble_device->temp;
+}
+
+
