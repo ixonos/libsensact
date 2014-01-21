@@ -12,7 +12,7 @@
 // This code is made for demo purposes!
 
 // Disable printf output
-#define printf(x...) 
+//#define printf(x...) 
 
 pthread_t ble_update_thread;
 

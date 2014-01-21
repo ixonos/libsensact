@@ -25,6 +25,9 @@ ble_demo: $(objects) ble_demo.o ble_update.a
 
 ble_test: $(objects) ble_test.o
 	$(CC) -Wall $(objects) ble_test.o -o ble_test $(LDFLAGS)
+
+ble_temp: $(objects) ble_temp.o
+	$(CC) -Wall $(objects) ble_temp.o -o ble_temp $(LDFLAGS)
 	
 clean:
 	rm -f *.o ble_demo ble_test ble_update.a
