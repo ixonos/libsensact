@@ -32,7 +32,7 @@ int find_att_handle(/*session_manuf,*/ char *feature, bool data_config, unsigned
 	    *property = char_ptr->property;
 
 	    if (handler != NULL)
-	        *handler = char_ptr->msg_hdl;
+	        *handler = (Msg_Hdl) char_ptr->msg_hdl;
 
 	    return 0;
 	}
