@@ -53,7 +53,7 @@ ble_t *create_emulator_ble() {
 		ble_device->gettemp = gettemp;
 		ble_device->settemp = settemp;
 		ble_device->temp = 10;
-		ble_device->temp_name = "bleTemp";
+		ble_device->temp_name = "ble_temp";
 	}
 
 	return ble_device;

@@ -222,34 +222,29 @@ void senshub_read(const char * name, char *data, size_t size) {
 	if (!strcmp(name, senshub->ambtemp_name)) {
 		float ambtemp = senshub->getambtemp();
 		memcpy(data, &ambtemp, size);
-	}
-	if (!strcmp(name, senshub->humidity_name)) {
+	} else if (!strcmp(name, senshub->humidity_name)) {
 		float humidity = senshub->gethumidity();
 		memcpy(data, &humidity, size);
-	}
-	if (!strcmp(name, senshub->objtemp_name)) {
+	} else if (!strcmp(name, senshub->objtemp_name)) {
 		float objtemp = senshub->getobjtemp();
 		memcpy(data, &objtemp, size);
-	}
-	if (!strcmp(name, senshub->light_name)) {
+	} else if (!strcmp(name, senshub->light_name)) {
 		float light = senshub->getlight();
 		memcpy(data, &light, size);
-	}
-	if (!strcmp(name, senshub->pitch_name)) {
+	} else if (!strcmp(name, senshub->pitch_name)) {
 		uint32_t pitch = senshub->getpitch();
 		memcpy(data, &pitch, size);
-	}
-	if (!strcmp(name, senshub->presure_name)) {
+	} else if (!strcmp(name, senshub->presure_name)) {
 		float presure = senshub->getpresure();
 		memcpy(data, &presure, size);
-	}
-	if (!strcmp(name, senshub->roll_name)) {
+	} else if (!strcmp(name, senshub->roll_name)) {
 		uint32_t roll = senshub->getroll();
 		memcpy(data, &roll, size);
-	}
-	if (!strcmp(name, senshub->yaw_name)) {
+	} else if (!strcmp(name, senshub->yaw_name)) {
 		uint32_t yaw = senshub->getyaw();
 		memcpy(data, &yaw, size);
+	} else {
+		printf("unknown var %s \n", name);
 	}
 }
 
@@ -261,7 +256,7 @@ int emulator_connect(int device_id, void *device) {
 
 	struct emulator_config_t *dev = (struct emulator_config_t*) device;
 	char* devicename = dev->name;
-	printf("device %s \n", devicename);
+
 	if (!(strcmp(devicename, emulator_bluetooth_lowenergy_device))) {
 		bledevice = create_emulator_ble();
 		handle_ble = device_id;
@@ -448,6 +443,7 @@ size_t getlenght(const char * var) {
 			size = sizeof(float);
 		}
 	}
+
 	return size;
 }
 /**
@@ -464,6 +460,7 @@ int emulator_read(int handle, char *data, int length, int timeout) {
 		response->response_code = RSP_OK;
 		response->data_length = getlenght(var);
 	} else {
+
 		size_t size = getlenght(var);
 		if (handle == handle_engine) {
 			engine_read(var, data, size);
