@@ -209,7 +209,10 @@ int sa_connect(char *name)
     {
         backend = (struct sa_backend_t *)list_current(iter);
         if (strcmp(backend->name, device->backend) == 0)
+        {
             backend_found = true;
+            break;
+        }
     }
 
     if (!backend_found)
