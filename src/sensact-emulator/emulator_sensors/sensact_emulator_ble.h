@@ -61,5 +61,4 @@ void settemp(float temp);
  */
 float gettemp(void);
 
-
 #endif /* SENS_EMULATOR_BLE_H_ */

@@ -35,9 +35,9 @@
 #define emulator_engine "engine_device"
 #define emulator_senshub "senshub_device"
 
-typedef struct
+struct emulator_config_t
 {
-  char *name;
-}emulator_config_t;
+  char* name;
+};
 
 #endif

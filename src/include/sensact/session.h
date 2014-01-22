@@ -49,6 +49,7 @@ struct session_t
     int (*disconnect)(int device);
     int (*reconnect)(int device);
 
+
     int (*write)(int device, char *data, int length, int timeout);
     int (*read)(int device, char *data, int length, int timeout);
 

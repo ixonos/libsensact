@@ -35,23 +35,23 @@
 #include <stdio.h>
 #include <sys/shm.h>
 #include <time.h>
+#include <errno.h>
 #include "sensact_emulator_engine.h"
-
-
 
 void *shared_mem_engine = (void*) 0;
 engine_t * engine;
 int shmid;
 engine_t *create_emulator_engine() {
 
-	shmid = shmget((key_t) shared_memory_engine, sizeof(engine_t),
+	shmid = shmget((key_t) shared_memory_engine_key, sizeof(engine_t),
 			0666 | IPC_CREAT);
 	if (shmid == -1) {
-		printf("shmget failed\n");
-	}
+		printf("shmget failed %s \n", strerror( errno));
 
-	shared_mem_engine = shmat(shmid, (void *) 0, 0);
-	engine = (engine_t*) shared_mem_engine;
+	} else {
+		shared_mem_engine = shmat(shmid, (void *) 0, 0);
+		engine = (engine_t*) shared_mem_engine;
+	}
 
 	if (engine != NULL) {
 		engine->setdirection = setdirection;
@@ -68,8 +68,8 @@ engine_t *create_emulator_engine() {
 /**
  * detach memory
  */
-void destroy_engine_emulator(){
-
+void destroy_engine_emulator() {
+	shmdt(shared_mem_engine);
 }
 
 void setrpm(int newrpm) {

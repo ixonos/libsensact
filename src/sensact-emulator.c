@@ -252,13 +252,16 @@ void senshub_read(const char * name, char *data, size_t size) {
 		memcpy(data, &yaw, size);
 	}
 }
+
 /**
  * connect to the sensor from device_id
  */
 int emulator_connect(int device_id, void *device) {
 	int retval = 1;
-	emulator_config_t *dev = (emulator_config_t*) device;
-	char *devicename = dev->name;
+
+	struct emulator_config_t *dev = (struct emulator_config_t*) device;
+	char* devicename = dev->name;
+	printf("device %s \n", devicename);
 	if (!(strcmp(devicename, emulator_bluetooth_lowenergy_device))) {
 		bledevice = create_emulator_ble();
 		handle_ble = device_id;
@@ -266,19 +269,37 @@ int emulator_connect(int device_id, void *device) {
 	}
 	if (!(strcmp(devicename, emulator_engine))) {
 		engine = create_emulator_engine();
-		handle_engine = device_id;
-		retval = 0;
+		if (engine != NULL) {
+			handle_engine = device_id;
+			retval = SA_OK;
+		} else {
+			retval = SA_ERROR;
+		}
 	}
 	if (!(strcmp(devicename, emulator_senshub))) {
 		senshub = create_senshub_emulator();
-		handle_senshub = device_id;
-		retval = 0;
+		if (senshub != NULL) {
+			handle_senshub = device_id;
+			retval = SA_OK;
+		} else {
+			retval = SA_ERROR;
+		}
 	}
+
 	return retval;
 }
 
 int emulator_disconnect(int handle) {
-	return 1;
+	if (handle == handle_engine) {
+		destroy_engine_emulator();
+	}
+	if (handle == handle_senshub) {
+		destroy_senshub_emulator();
+	}
+	if (handle == handle_ble) {
+		destroy_ble_emulator();
+	}
+	return SA_OK;
 }
 
 int emulator_reconnect(int handle) {

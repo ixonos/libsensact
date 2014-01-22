@@ -31,7 +31,7 @@
 
 #ifndef SENS_EMULATOR_ENGINE_H_
 #define SENS_EMULATOR_ENGINE_H_
-#define shared_memory_engine 1234
+#define shared_memory_engine_key 1234
 
 /**
  *A little engine, with rpm and motor direction
@@ -78,6 +78,5 @@ char getdirection();
  * Start the emulator
  */
 void start();
-
 
 #endif /* SENS_EMULATOR_ENGINE_H_ */

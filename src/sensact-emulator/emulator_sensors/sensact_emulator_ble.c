@@ -37,27 +37,23 @@
 #include <time.h>
 #include "sensact_emulator_ble.h"
 
-
 void *shared_mem = (void*) 0;
 ble_t * ble_device;
 int shmid;
 ble_t *create_emulator_ble() {
 
-	shmid = shmget((key_t) shared_memory_ble, sizeof(ble_t),
-			0666 | IPC_CREAT);
+	shmid = shmget((key_t) shared_memory_ble, sizeof(ble_t), 0666 | IPC_CREAT);
 	if (shmid == -1) {
 		printf("shmget failed\n");
+	} else {
+		shared_mem = shmat(shmid, (void *) 0, 0);
+		ble_device = (ble_t*) shared_mem;
 	}
-
-	shared_mem = shmat(shmid, (void *) 0, 0);
-	ble_device = (ble_t*) shared_mem;
-
 	if (ble_device != NULL) {
 		ble_device->gettemp = gettemp;
 		ble_device->settemp = settemp;
 		ble_device->temp = 10;
 		ble_device->temp_name = "bleTemp";
-
 	}
 
 	return ble_device;
@@ -65,8 +61,8 @@ ble_t *create_emulator_ble() {
 /**
  * detach memory
  */
-void destroy_ble_emulator(){
-
+void destroy_ble_emulator() {
+	shmdt(shared_mem);
 }
 
 void settemp(float temp) {
@@ -76,5 +72,4 @@ void settemp(float temp) {
 float gettemp(void) {
 	return ble_device->temp;
 }
-
 

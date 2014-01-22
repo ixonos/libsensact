@@ -33,6 +33,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/shm.h>
+#include <errno.h>
 #include "sensact_emulator_senshub.h"
 
 senshub_t *senshub;
@@ -40,13 +41,15 @@ void *shared_mem_senshub = (void*) 0;
 int shmid;
 senshub_t * create_senshub_emulator() {
 
-	shmid = shmget((key_t) shared_memory_senshub, sizeof(senshub_t), 0666 | IPC_CREAT);
+	shmid = shmget((key_t) shared_memory_senshub, sizeof(senshub_t),
+			0666 | IPC_CREAT);
 	if (shmid == -1) {
-		printf("shmget failed\n");
-	}
+		printf("shmget failed %s \n", strerror( errno));
+	} else {
 
-	shared_mem_senshub = shmat(shmid, (void *) 0, 0);
-	senshub = (senshub_t*)shared_mem_senshub;
+		shared_mem_senshub = shmat(shmid, (void *) 0, 0);
+		senshub = (senshub_t*) shared_mem_senshub;
+	}
 
 	if (senshub != NULL) {
 		senshub->roll = 0;
@@ -92,9 +95,8 @@ senshub_t * create_senshub_emulator() {
 	return senshub;
 }
 
-void destroy_senshub_emulator(){
-
-
+void destroy_senshub_emulator() {
+	shmdt(shared_mem_senshub);
 }
 
 int getroll() {
