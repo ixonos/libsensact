@@ -19,8 +19,8 @@ pthread_t ble_update_thread;
 #define TIMEOUT 2 // sec
 
 #define BLE_RW_RETRYCNT    5 // retrials for failed readings/writings to the ble-device
-#define BLE_READ_INTERVAL  3 // seconds
-#define BLE_SCAN_TIME      3 // seconds
+#define BLE_READ_INTERVAL  1 // seconds
+#define BLE_SCAN_TIME      20 // seconds
 
 //#define BLE_RECONN_RETRYCNT   10
 #define BLE_RECONN_INTERVAL  5 // seconds

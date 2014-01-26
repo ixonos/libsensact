@@ -35,48 +35,53 @@ int ble_read_l2cap_socket(/*int handle,*/ unsigned char *data, int buff_len, int
     fd_set rfds;
     struct timeval tv;
 
-    int len = 0;
+    int len = -1;
     int i, result;
 
-    while(1) {
-	FD_ZERO(&rfds);
-	FD_SET(0, &rfds);
-	FD_SET(ble.l2capSock, &rfds);
+    FD_ZERO(&rfds);
+    FD_SET(ble.l2capSock, &rfds);
 
-	tv.tv_sec = timeout; // CHECK GOOD VALUE ?????
-	tv.tv_usec = 0;
+    tv.tv_sec = timeout;
+    tv.tv_usec = 0;
 
-	result = select(ble.l2capSock + 1, &rfds, NULL, NULL, &tv);
+    result = select(ble.l2capSock + 1, &rfds, NULL, NULL, &tv);
 
+    if (result <= 0) {
 	if ( (result == -1) || (result == 0) ) {
 	    printf("socket read error: %s\n", (result == -1) ? strerror(errno) : "timeout");
-	    return -1;
+	    syslog(LOG_ERR, "socket read error: %s\n", (result == -1) ? strerror(errno) : "timeout");
 	}
-	
-	if (FD_ISSET(ble.l2capSock, &rfds)) {
-	    // received data from the socket
-	    // read data-octets (maximum number of octets to be read ==buff_len)
-	    len = read(ble.l2capSock, data, buff_len);
-
-	    if (len < 0) {
-	      printf("Bad data from socket\n");
-	      syslog(LOG_ERR, "Bad data from socket");
-	      return -1;
-	    }
-
-	    printf("Received data, %d bytes (BLE): ", len);
-	    syslog(LOG_ERR, "Received data (BLE):\n");
-	    for(i = 0; i < len; i++) {
-		printf( "0x%x ", ((int)data[i]) );
-		syslog( LOG_ERR, "0x%x", ((int)data[i]) );
-	    }
-	    printf("\n");
-	    return len;
+	else {
+	    printf("socket read error: %s\n", "undefined");
+	    syslog(LOG_ERR, "socket read error: %s\n", "undefined");
 	}
+	return -1;
     }
 
-    return len;
+    if (FD_ISSET(ble.l2capSock, &rfds)) {
+	// received data from the socket
+	// read data-octets (maximum number of octets to be read = buff_len)
+	len = read(ble.l2capSock, data, buff_len);
 
+	if (len < 0) {
+	  printf("Bad data from socket, error: %s\n", (len == -1) ? strerror(errno) : "undefined");
+	  syslog(LOG_ERR, "Bad data from socket, error: %s\n", (len == -1) ? strerror(errno) : "undefined");
+	  return -1;
+	}
+
+	printf("Received data, %d bytes (BLE): ", len);
+	//syslog(LOG_ERR, "Received data (BLE):\n");
+	for(i = 0; i < len; i++) {
+	    printf( "0x%x ", ((int)data[i]) );
+	    //syslog( LOG_ERR, "0x%x", ((int)data[i]) );
+	}
+	printf("\n");
+	return len;
+    }
+    else // this condition shouldn't be reached
+        return -1;
+
+    return len;
 }
 
 int ble_write_l2cap_socket(/*int handle,*/ unsigned char *data, int length, int timeout)
@@ -91,7 +96,8 @@ int ble_write_l2cap_socket(/*int handle,*/ unsigned char *data, int length, int 
 
     len = write(ble.l2capSock, data, length);
     if (len < 0) {
-	printf("error in writing on socket\n"); // TODO: close the socket ??
+	printf("error in writing on socket\n");
+	syslog(LOG_ERR, "error in writing on socket");
 	return -1;
     }
     return len;
@@ -131,7 +137,7 @@ int ble_connect_l2cap_socket(int *ble_device_handle, char *addr)
     result = bind(l2capSock, (struct sockaddr*)&sockAddr, sizeof(sockAddr));
 
     printf("bind %s\n", (result == -1) ? strerror(errno) : "success");
-    syslog(LOG_ERR, "bind");
+    syslog(LOG_ERR, "bind %s\n", (result == -1) ? strerror(errno) : "success");
 
     // connect
     memset(&sockAddr, 0, sizeof(sockAddr));
@@ -153,7 +159,8 @@ int ble_connect_l2cap_socket(int *ble_device_handle, char *addr)
     result = connect(l2capSock, (struct sockaddr *)&sockAddr, sizeof(sockAddr));
     if (result == -1) {
       if (errno != EINPROGRESS) {
-	printf("connect %s\n", strerror(errno));
+	printf("connect error: %s\n", strerror(errno));
+	syslog(LOG_ERR, "connect error: %s\n", strerror(errno));
 	close(l2capSock);
 	printf("error\n");
 	return -1;
@@ -184,6 +191,7 @@ int ble_connect_l2cap_socket(int *ble_device_handle, char *addr)
     }
     else {  // result = 0 -> timeout; result < 0 -> error case
 	printf("socket not open: %s\n", (result == -1) ? strerror(errno) : "timeout");
+	syslog(LOG_ERR, "socket not open: %s\n", (result == -1) ? strerror(errno) : "timeout");
         close(l2capSock);
 	return -1;
     }
@@ -259,12 +267,16 @@ int ble_get_float(char *feature, double *value, int timeout)
 
     if (find_att_handle(/*session_manuf,*/ feature, ENABLE_SENSOR, 0, &conf_handle, &property, NULL) < 0)
 	return -1; // handle not found
-	
-    ret = ble_enable_sensor(conf_handle, 1, timeout); // trigger sensor-measurement by enabling the sensor
-    if (ret < 0)
-        return -1;
 
-    sleep(1); // set some time for the measurement to finalize
+    if (ble.sensor_status == 0) // sensor is disabled
+    {
+        ret = ble_enable_sensor(conf_handle, 1, timeout); // trigger sensor-measurement by enabling the sensor
+
+        if (ret < 0)
+            return -1;
+
+        sleep(1); // set some time for the measurement to finalize
+    }
 
     if (find_att_handle(/*session_manuf,*/ feature, READ_SENSOR, 0, &data_handle, &property, &msg_handler_ptr) < 0)
 	return -1; // handle not found
@@ -276,6 +288,8 @@ int ble_get_float(char *feature, double *value, int timeout)
     if (ret < 0)
         return -1;
 
+    ble.sensor_status = 1;
+
     // call valid manufacturer specific response-handler
     ret = ( (*msg_handler_ptr)(&buff[index], length, (void*) value) );
 
@@ -285,6 +299,7 @@ int ble_get_float(char *feature, double *value, int timeout)
 
 int ble_connect(char *ble_addr)
 {
+    ble.sensor_status = 0;
     return ble_connect_l2cap_socket(&ble.l2capSock, ble_addr);
 }
 

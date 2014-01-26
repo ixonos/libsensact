@@ -11,6 +11,7 @@
 struct ble_t
 {
     int l2capSock;
+    int sensor_status; // flag indicating if sensor is accessable
 };
 
 int ble_get_float(char *feature, double *value, int timeout);
