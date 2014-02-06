@@ -52,7 +52,7 @@ void control_am335x_user_led0(unsigned char flag)
     // control user led 0
     if (flag == 0) // led OFF
     {
-        fd = fopen("/sys/class/leds/am335x\:EVM_SK\:usr0/brightness","rw+");
+        fd = fopen("/sys/class/leds/evmsk\:green\:usr0/brightness","rw+");
         if (fd)
         {
             fwrite("0", 1, 1, fd); // OFF
@@ -62,14 +62,14 @@ void control_am335x_user_led0(unsigned char flag)
     }
     if (flag == 1)  // led ON
     {
-        fd = fopen("/sys/class/leds/am335x\:EVM_SK\:usr0/trigger","rw+");
+        fd = fopen("/sys/class/leds/evmsk\:green\:usr0/trigger","rw+");
         if (fd)
         {
             fwrite("none", 1, 4, fd); // blinking off
             fclose(fd);
         }
 
-        fd = fopen("/sys/class/leds/am335x\:EVM_SK\:usr0/brightness","rw+");
+        fd = fopen("/sys/class/leds/evmsk\:green\:usr0/brightness","rw+");
         if (fd)
         {
             fwrite("1", 1, 1, fd); // ON
@@ -82,7 +82,7 @@ void control_am335x_user_led0(unsigned char flag)
         //echo 100 >> /sys/class/leds/am335x\:EVM_SK\:usr0/delay_off
         //echo 100 >> /sys/class/leds/am335x\:EVM_SK\:usr0/delay_on
         // default: 1 sec ON/1 sec OFF
-        fd = fopen("/sys/class/leds/am335x\:EVM_SK\:usr0/trigger","rw+");
+        fd = fopen("/sys/class/leds/evmsk\:green\:usr0/trigger","rw+");
         if (fd)
         {
             fwrite("timer", 1, 5, fd);
