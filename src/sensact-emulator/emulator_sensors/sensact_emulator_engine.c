@@ -43,7 +43,7 @@ engine_t * engine;
 int shmid;
 engine_t *create_emulator_engine() {
 
-	shmid = shmget((key_t) shared_memory_engine_key, sizeof(engine_t),
+	shmid = shmget((key_t) shared_memory_engine, sizeof(engine_t),
 			0666 | IPC_CREAT);
 	if (shmid == -1) {
 		printf("shmget failed %s \n", strerror( errno));

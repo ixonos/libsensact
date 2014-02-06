@@ -167,23 +167,110 @@ static char * test_orientation_sweep() {
 	return 0;
 }
 
+static char * test_air_pressure() {
+
+	int pressure = 0;
+	int i;
+	int j;
+	for (j = 0; j < 10; j++) {
+		for (i = pressure; i == 100; i++) {
+			senshub->presure = i;
+		}
+		for (i = 100; i > 0; i--) {
+			senshub->presure = i;
+		}
+	}
+	return 0;
+}
+
+static char * test_brightness_sweep() {
+
+	int brightness = 0;
+	int i;
+	int j;
+
+	for (j = 0; j < 10; j++) {
+		for (i = brightness; i == 100; i++) {
+			senshub->light = i;
+		}
+		for (i = 100; i > 0; i--) {
+			senshub->light = i;
+		}
+	}
+	return 0;
+}
+
+static char * test_humidity_sweep() {
+	int humidity = 0;
+	int i;
+	int j = 0;
+	for (j = 0; j < 10; j++) {
+		for (i = humidity; i == 100; i++) {
+			senshub->humidity = i;
+			sleep(1);
+		}
+		for (i = 100; i > 0; i--) {
+			senshub->humidity = i;
+			sleep(1);
+		}
+	}
+	return 0;
+}
+
+static char * test_ambient_temperature_sweep() {
+	int temp = -20;
+	int i;
+	int j = 0;
+	for (j = 0; j < 10; j++) {
+		for (i = temp; i < 50; i++) {
+			senshub->ambtemp = i;
+			sleep(1);
+		}
+		for (i = 50; i > 0; i--) {
+			senshub->ambtemp = i;
+			sleep(1);
+		}
+
+	}
+
+	return 0;
+}
+
 static char * test_temperature_sweep() {
-	senshub->ambtemp = 50;
+	int temp = -20;
+	int i;
+	int j = 0;
+	for (j = 0; j < 10; j++) {
+		for (i = temp; i < 50; i++) {
+			senshub->objtemp = i;
+			sleep(1);
+		}
+		for (i = 50; i > 0; i--) {
+			senshub->objtemp = i;
+			sleep(1);
+		}
+	}
 	return 0;
 }
 
 static char* runsenshub_tests() {
 
 	mu_run_test(test_orientation_sweep);
+	mu_run_test(test_temperature_sweep);
+	mu_run_test(test_ambient_temperature_sweep);
+	mu_run_test(test_humidity_sweep);
+	mu_run_test(test_brightness_sweep);
+	mu_run_test(test_air_pressure);
+
 	return 0;
 }
 
 static char* runengine_tests() {
 
-	 mu_run_test(test_sweep_engine_fast);
-	 mu_run_test(test_sweep_engine_zero_max);
-	 mu_run_test(test_sweep_engine_zero_max_zero);
-	 mu_run_test(test_sweep_engine_and_reverse);
+	mu_run_test(test_sweep_engine_fast);
+	mu_run_test(test_sweep_engine_zero_max);
+	mu_run_test(test_sweep_engine_zero_max_zero);
+	mu_run_test(test_sweep_engine_and_reverse);
 
 	return 0;
 }
@@ -202,13 +289,16 @@ int setup() {
 	int retval = 0;
 	int shmid = 0;
 
-	shmid = shmget((key_t) shared_memory_engine, sizeof(engine_t), 0666 | IPC_CREAT);
+	shmid = shmget((key_t) shared_memory_engine, sizeof(engine_t),
+			0666 | IPC_CREAT);
 	if (shmid != -1) {
 		shared_memory = shmat(shmid, (void *) 0, 0);
 		engine = (engine_t *) shared_memory;
 		retval = 1;
 	}
-	shmid = shmget((key_t) shared_memory_senshub, sizeof(senshub_t), 0666 | IPC_CREAT);
+
+	shmid = shmget((key_t) shared_memory_senshub, sizeof(senshub_t),
+			0666 | IPC_CREAT);
 	if (shmid != -1) {
 		shared_memory = shmat(shmid, (void *) 0, 0);
 		senshub = (senshub_t *) shared_memory;
@@ -216,8 +306,6 @@ int setup() {
 	}
 	return retval;
 }
-
-
 
 int main(int argc, char **argv) {
 	int retval = setup();

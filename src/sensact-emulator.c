@@ -137,6 +137,7 @@ void engine_read(const char * name, char *data, size_t size) {
  * set roll to the senshub
  */
 size_t senshub_setroll(struct request_packet_t *req) {
+
 	float roll = 0;
 	memcpy(&roll, &req->data[req->name_length], req->value_length);
 	senshub->setroll(roll);
@@ -146,6 +147,7 @@ size_t senshub_setroll(struct request_packet_t *req) {
  * set pitch to the senshub
  */
 size_t senshub_setpitch(struct request_packet_t *req) {
+
 	float pitch = 0;
 	memcpy(&pitch, &req->data[req->name_length], req->value_length);
 	senshub->setpitch(pitch);
@@ -155,6 +157,7 @@ size_t senshub_setpitch(struct request_packet_t *req) {
  * set yaw to the senshub
  */
 size_t senshub_setyaw(struct request_packet_t *req) {
+
 	float yaw = 0;
 	memcpy(&yaw, &req->data[req->name_length], req->value_length);
 	senshub->setyaw(yaw);
@@ -219,6 +222,7 @@ void ble_device_read(const char *name, char *data, size_t size) {
  * read vars from the senshub
  */
 void senshub_read(const char * name, char *data, size_t size) {
+
 	if (!strcmp(name, senshub->ambtemp_name)) {
 		float ambtemp = senshub->getambtemp();
 		memcpy(data, &ambtemp, size);
@@ -256,7 +260,7 @@ int emulator_connect(int device_id, void *device) {
 
 	struct emulator_config_t *dev = (struct emulator_config_t*) device;
 	char* devicename = dev->name;
-
+	printf("emulator device ->  %s \n", devicename);
 	if (!(strcmp(devicename, emulator_bluetooth_lowenergy_device))) {
 		bledevice = create_emulator_ble();
 		handle_ble = device_id;
@@ -460,12 +464,12 @@ int emulator_read(int handle, char *data, int length, int timeout) {
 		response->response_code = RSP_OK;
 		response->data_length = getlenght(var);
 	} else {
-
 		size_t size = getlenght(var);
 		if (handle == handle_engine) {
 			engine_read(var, data, size);
 		}
 		if (handle == handle_senshub) {
+
 			senshub_read(var, data, size);
 		}
 		if (handle == handle_ble) {

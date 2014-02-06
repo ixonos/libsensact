@@ -103,6 +103,7 @@ int getroll() {
 	return senshub->roll;
 }
 void setroll(int roll) {
+	printf("set roll \n");
 	senshub->roll = roll;
 }
 
@@ -110,6 +111,7 @@ int getpitch() {
 	return senshub->pitch;
 }
 void setpitch(int pitch) {
+	printf("set pitch \n");
 	senshub->pitch = pitch;
 }
 
@@ -117,6 +119,7 @@ int getyaw() {
 	return senshub->yaw;
 }
 void setyaw(int yaw) {
+	printf("set yaw \n");
 	senshub->yaw = yaw;
 }
 
