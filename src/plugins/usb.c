@@ -33,7 +33,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <libusb.h>
-#include "usb.h"
 #include "sensact/plugins/usb_config.h"
 #include "sensact/session.h"
 #include "sensact/debug.h"
