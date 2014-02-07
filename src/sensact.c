@@ -267,9 +267,9 @@ error:
 
 int sa_disconnect(int device)
 {
-    session[device].disconnect(device);
-
     pthread_mutex_lock(&session_mutex);
+    if (session[device].disconnect(device) == SA_OK)
+        session[device].connected = false;
     session[device].allocated = false;
     pthread_mutex_unlock(&session_mutex);
 
