@@ -3,7 +3,7 @@
 #
 
 CC=$(PREFIX)gcc
-CFLAGS=-Wall -fPIC -DVERSION=$(VERSION) -Wno-unused-variable -DSENSACT_CLIENT -I./include
+CFLAGS=-Wall -std=gnu99 -DVERSION=$(VERSION) -Wno-unused-variable -DSENSACT_CLIENT -I./include
 LDFLAGS=-L. -lsensact
 VERSION=0.3
 
@@ -15,10 +15,10 @@ debug: CFLAGS += -DDEBUG -g
 debug: all
 
 $(objects): %.o: %.c
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) -fPIC -c $< -o $@
 
 libsensact.so: $(objects)
-	$(CC) -Wall -shared -Wl,-soname,libsensact.so -o libsensact.so $(objects) -Wl,-init,init -ldl
+	$(CC) $(CFLAGS) -shared -Wl,-soname,libsensact.so -o libsensact.so $(objects) -Wl,-init,init -ldl
 
 test: libsensact.so test.o
 	$(CC) -Wall test.o -o test $(LDFLAGS)
