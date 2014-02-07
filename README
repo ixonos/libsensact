@@ -36,7 +36,7 @@ stable 1.0 release.
 
  /* 
   * This example uses libsensact to fetch roll, pitch, and yaw values from the
-  * "compass0" sensor.
+  * "compass0" sensor connected via USB (using the sensact USB backend).
   */
 
  int main(void)
@@ -44,18 +44,20 @@ stable 1.0 release.
     int device;
     int roll, pitch, yaw;
 
-    device = connect("compass0");
+    sa_plugin_load("usb");
 
-    get_int(device, "roll", &roll, TIMEOUT);
+    device = sa_connect("compass0");
+
+    sa_get_int(device, "roll", &roll, TIMEOUT);
     printf("roll:     %03d\n", roll);
 
-    get_int(device, "pitch", &pitch, TIMEOUT);
+    sa_get_int(device, "pitch", &pitch, TIMEOUT);
     printf("pitch:    %03d\n", pitch);
 
-    get_int(device, "yaw", &yaw, TIMEOUT);
+    sa_get_int(device, "yaw", &yaw, TIMEOUT);
     printf("yaw:      %03d\n", yaw);
 
-    disconnect(device);
+    sa_disconnect(device);
 
     return 0;
  }
