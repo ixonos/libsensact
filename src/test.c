@@ -34,12 +34,16 @@
 #include <unistd.h>
 #include <string.h>
 #include "sensact/sensact.h"
-#include "sensact/usb_config.h"
+#include "sensact/plugins/usb_config.h"
 
 #define TIMEOUT 100 // ms
-#define DUMMY1
 
-/* List of supported sensor/actuator devices */
+// Test configuration
+#define DUMMY1
+#define LOOP_COUNT 100000
+#define LOOP_DELAY 100000 // us
+
+// List of supported sensor/actuator devices
 
 struct usb_config_t usb_dummy0_config =
 {
@@ -123,8 +127,11 @@ void dummy_test(int device)
 int main(void)
 {
     int dummy0, dummy1;
-    int loop=100000;
+    int loop=LOOP_COUNT;
     char backends[400];
+
+    // Load backend plugins
+    sa_plugin_load("usb");
 
     // Register known devices
     sa_register_devices((struct sa_device_t *) &devices);
@@ -151,7 +158,7 @@ int main(void)
 #ifdef DUMMY1
         dummy_test(dummy1);
 #endif
-        usleep(100000);
+        usleep(LOOP_DELAY);
     }
 
     // Disconnect from device(s)

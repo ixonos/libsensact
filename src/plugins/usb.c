@@ -33,10 +33,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <libusb.h>
-#include "sensact/usb.h"
-#include "sensact/usb_config.h"
+#include "usb.h"
+#include "sensact/plugins/usb_config.h"
 #include "sensact/session.h"
 #include "sensact/debug.h"
+#include "sensact/plugin.h"
+#include "sensact/sensact.h"
+
+struct usb_t
+{
+    struct libusb_device_handle *device;
+};
 
 int usb_connect(int device, void *config)
 {
@@ -192,3 +199,16 @@ struct sa_backend_t usb_backend =
     .read = usb_read,
     .write = usb_write,
 };
+
+
+// Plugin configuration
+struct sa_plugin_t usb =
+{
+    .description = "Sensact USB plugin",
+    .version = "0.1",
+    .author = "Martin Lund",
+    .license = "BSD-3",
+    .backend = &usb_backend,
+};
+
+sa_plugin_register(usb);

@@ -83,11 +83,17 @@ struct sa_backend_t
 
 extern char *sa_error;
 
-int sa_register_backend(struct sa_backend_t *backend); // Register backend
-int sa_list_backends(char *backends);                  // Returns string list of available backends
-int sa_register_devices(struct sa_device_t *devices);  // Register devices
+int sa_plugin_load(char *name);
+int sa_plugin_unload(char *name);
 
-int sa_connect(char *name);    // Connect to device with name
+int sa_register_backend(struct sa_backend_t *backend);   // Register backend
+//int sa_unregister_backend(struct sa_backend_t *backend); // Unregister backend (TODO)
+int sa_list_backends(char *backends);                    // Return list of registered backends
+
+int sa_register_devices(struct sa_device_t *devices);    // Register devices (TO BE OBSOLETED)
+//int sa_register_device(struct sa_device_t *device);    // Register device (TODO)
+
+int sa_connect(char *name);    // Connect to device by name
 int sa_disconnect(int device); // Disconnect device
 
 int sa_get_char(int device, char *name, char *value, int timeout);   // 8 bit integer value

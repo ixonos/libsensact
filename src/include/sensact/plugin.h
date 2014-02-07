@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2014, Ixonos Denmark ApS
- * Copyright (c) 2013-2014, Martin Lund
+ * Copyright (c) 2012-2013, Martin Lund
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holders nor contributors may be
+ * 3. Neither the name of the copyright holders nor contributors may be 
  *    used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,21 +29,27 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef USB_H
-#define USB_H
+#ifndef PLUGIN_H
+#define PLUGIN_H
 
-#include <libusb.h>
 #include "sensact/sensact.h"
 
-struct usb_t
+struct sa_plugin_t
 {
-    struct libusb_device_handle *device;
+   const char *name;
+   const char *version;
+   const char *description;
+   const char *author;
+   const char *license;
+   int (*load)(void);
+   int (*unload)(void);
+   struct sa_backend_t *backend;
 };
 
-int usb_connect(int handle, void *config);
-int usb_disconnect(int handle);
-int usb_write(int handle, char *data, int length, int timeout);
-int usb_read(int handle, char *data, int length, int timeout);
+void register_plugin(struct sa_plugin_t *plugin);
 
-extern struct sa_backend_t usb_backend;
+#define sa_plugin_register(x) \
+        struct sa_plugin_t * plugin_register(void) \
+        { register_plugin(&x); return &x; }
+
 #endif

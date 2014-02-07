@@ -39,7 +39,7 @@
 #include "sensact/packet.h"
 #include "sensact/debug.h"
 #include "sensact/list.h"
-#include "sensact/usb.h"
+#include "sensact/plugin-manager.h"
 
 static int get_char(int device, char *name, char *value, int timeout);
 static int get_short(int device, char *name, short *value, int timeout);
@@ -70,9 +70,8 @@ void init(void)
     // Create list for backend references
     backend_list = create_list();
 
-    // Register default backend(s)
-    if (sa_register_backend(&usb_backend) != SA_OK)
-        printf("Error: %s\n", sa_error);
+    // Start plugin manager
+    plugin_manager_start();
 }
 
 int sa_register_device(struct sa_device_t *device)
@@ -275,6 +274,16 @@ int sa_disconnect(int device)
     pthread_mutex_unlock(&session_mutex);
 
     return SA_OK;
+}
+
+int sa_plugin_load(char *name)
+{
+    return plugin_load(name);
+}
+
+int sa_plugin_unload(char *name)
+{
+    return plugin_unload(name);
 }
 
 static int send_command(
