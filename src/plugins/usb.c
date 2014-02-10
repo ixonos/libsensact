@@ -33,13 +33,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <libusb.h>
-#include "sensact/plugins/usb_config.h"
+#include "sensact/plugins/usb-config.h"
 #include "sensact/session.h"
 #include "sensact/debug.h"
 #include "sensact/plugin.h"
 #include "sensact/sensact.h"
 
-struct usb_t
+struct usb_data_t
 {
     struct libusb_device_handle *device;
 };
@@ -47,9 +47,9 @@ struct usb_t
 int usb_connect(int device, void *config)
 {
     struct usb_config_t *usb_config = config;
-    struct usb_t *usb_data;
+    struct usb_data_t *usb_data;
 
-    usb_data = malloc(sizeof(struct usb_t));
+    usb_data = malloc(sizeof(struct usb_data_t));
     session[device].data = usb_data;
 
     libusb_device_handle *usb_device;
@@ -84,7 +84,7 @@ int usb_connect(int device, void *config)
 
 int usb_disconnect(int device)
 {
-    struct usb_t *usb_data = session[device].data;
+    struct usb_data_t *usb_data = session[device].data;
 
     debug_printf("Disconnecting USB device...\n");
 
@@ -102,7 +102,7 @@ int usb_disconnect(int device)
 static int usb_reconnect(int device)
 {
     struct usb_config_t *usb_config = session[device].device->config;
-    struct usb_t *usb_data = session[device].data;
+    struct usb_data_t *usb_data = session[device].data;
     int ret;
 
     debug_printf("Reconnecting...\n");
@@ -125,7 +125,7 @@ static int usb_reconnect(int device)
 int usb_write(int device, char *data, int length, int timeout)
 {
     struct usb_config_t *usb_config = session[device].device->config;
-    struct usb_t *usb_data = session[device].data;
+    struct usb_data_t *usb_data = session[device].data;
     int count;
     int ret = LIBUSB_ERROR_OTHER;
     int i;
@@ -159,7 +159,7 @@ int usb_write(int device, char *data, int length, int timeout)
 int usb_read(int device, char *data, int length, int timeout)
 {
     struct usb_config_t *usb_config = session[device].device->config;
-    struct usb_t *usb_data = session[device].data;
+    struct usb_data_t *usb_data = session[device].data;
     int count;
     int ret = LIBUSB_ERROR_OTHER;
     int i;

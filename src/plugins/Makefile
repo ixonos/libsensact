@@ -1,5 +1,5 @@
 CC=$(PREFIX)gcc
-CFLAGS=-Wall -Wno-unused-variable -Wno-unused-but-set-variable
+CFLAGS=-Wall -std=gnu99 -Wno-unused-variable -Wno-unused-but-set-variable
 
 SA_INCLUDE=-I../include
 SA_PLUGIN_C_FILE=../plugin.c
