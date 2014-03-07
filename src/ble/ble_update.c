@@ -20,13 +20,15 @@ pthread_t ble_update_thread;
 #define TIMEOUT 2 // sec
 
 #define BLE_RW_RETRYCNT    5 // retrials for failed readings/writings to the ble-device
-#define BLE_READ_INTERVAL  1 // seconds
+#define BLE_READ_INTERVAL  100000 // micro seconds
 #define BLE_SCAN_TIME      20 // seconds
 
 //#define BLE_RECONN_RETRYCNT   10
-#define BLE_RECONN_INTERVAL  5 // seconds
+#define BLE_RECONN_INTERVAL  2 // seconds
 
 float ble_temp = 0; // temperature
+float ble_pitch = 0; // pitch-angle
+float ble_roll = 0; // roll-angle
 
 enum
 {
@@ -42,7 +44,7 @@ typedef struct ble_conn_t
 {
     char ble_addr[18];
     int state;
-    int rw_retry_cnt;
+    unsigned int rw_retry_cnt;
 } BLE_CONN_T;
 
 void control_am335x_user_led0(unsigned char flag)
@@ -219,27 +221,33 @@ error:
     return -1;
 }
 
-// This demo-program in simple way to adapt ble-interface to sensact-platform
+// This demo-program is simple way to adapt ble-interface to sensact-platform
 
-void update_loop(char *ble_addr, float *temperature)
+void update_loop(char *ble_addr, float *pitch, float *roll)
 {
 
-    // this function will handle connection-establishment (connect/reconnect) 
-    // and temperature-reading
+    // There is NO direct function call-API for sensact-server to retrieve BLE-values from libsensact yet,
+    // but this separately executable program to serve BLE-sensor parameters.
+    // Sensor-values are returned to upper level components (sensact-server, IxGui) as parameters.
 
-    // This function will called once, so it should be save to do ble-specific initializations here
+    // This function will handle connection-establishment (connect/reconnect) and reading of the supported sensor-values:
+    // - temperature
+    // - pitch, roll, yaw (calculated by accelerometer, gyroscope, magnetometer data)
 
-    // In endless-loop it starts to follow next procedure: 
+    // This function will called once, so it should be safe to do ble-specific initializations here
+
+    // In endless-loop it starts to follow next procedure:
     //     BLE_STATE_NOT_CONNECTED -> BLE_STATE_CONNECTED -> BLE_STATE_READ ->
     //     BLE_STATE_WF_READ -> BLE_STATE_READ ->  BLE_STATE_WF_READ -> BLE_STATE_READ -> BLE_STATE_WF_READ -> BLE_STATE_READ ...
-    // If problems in reading occur, after BLE_RW_RETRYCNT-retrials: 
-    //      BLE_STATE_DISCONNECTED -> BLE_STATE_WF_RECONN -> BLE_STATE_NOT_CONNECTED -> BLE_STATE_CONNECTED -> BLE_STATE_READ  ...
+    // If problems in reading occur, after BLE_RW_RETRYCNT-retrials:
+    //     BLE_STATE_DISCONNECTED -> BLE_STATE_WF_RECONN -> BLE_STATE_NOT_CONNECTED -> BLE_STATE_CONNECTED -> BLE_STATE_READ ...
 
 
     struct ble_conn_t ble_conn;
     int ret = -1;
-    double double_val;
+    double tmp_pitch, tmp_roll, tmp_yaw, tmp_temperature;
     char ble_adv_addr[18]; // advertisement address
+    double time_stamp = 0;
 
     ble_conn.state = BLE_STATE_NOT_CONNECTED; // ble-connection should not be establishment yet
     strncpy(ble_conn.ble_addr, ble_addr, sizeof(ble_conn.ble_addr));
@@ -283,8 +291,18 @@ void update_loop(char *ble_addr, float *temperature)
 
             case BLE_STATE_CONNECTED:
                 {
-                    printf("ble connected\n");
-                    ble_conn.state = BLE_STATE_READ;
+                    printf("BLE connected\n");
+		    syslog(LOG_ERR, "BLE connected\n");
+
+                    printf("ret: %d, discoverCharacteristics\n\n", ret);
+                    ret = discoverCharacteristics();
+                    if (ret < 0) // connection establishment failed
+                    {
+                        ble_conn.state = BLE_STATE_WF_RECONN;
+                        control_am335x_user_led0(0); // led off
+                    }
+                    else
+                        ble_conn.state = BLE_STATE_READ;
                 }
                 break;
 
@@ -298,45 +316,65 @@ void update_loop(char *ble_addr, float *temperature)
 
             case BLE_STATE_WF_READ: // wait for the next reading
                 {
-                    printf("Wait for reading-period (%ds) to be elapsed...\n", BLE_READ_INTERVAL);
-                    sleep(BLE_READ_INTERVAL);
+                    printf("Wait for reading-period (%d ms) to be elapsed...\n", BLE_READ_INTERVAL/1000);
+                    usleep(BLE_READ_INTERVAL);
                     ble_conn.state = BLE_STATE_READ;
                 }
                 break;
 
             case BLE_STATE_READ:
                 {
-                    double_val = 0;
-                    ret = ble_get_float("Temp", &double_val, NULL, NULL, TIMEOUT, NULL);
-                    printf("ret: %d, sensor value: %lf\n", ret, double_val);
-                    printf("--------------------------------------------------------------------------\n");
+                    tmp_pitch = 0, tmp_roll = 0, tmp_yaw = 0, tmp_temperature = 0;
+
+                     ret = ble_get_float("accelero", &tmp_pitch, &tmp_roll, NULL, TIMEOUT, &time_stamp);
+                    //if (ret >= 0)
+                    //    ret = ble_get_float("Temp", &tmp_temperature, NULL, NULL, TIMEOUT, &time_stamp);
+                    //else if (ret >= 0)
+                    //    ret = ble_get_float("gyroscope", &tmp_yaw, NULL, NULL, TIMEOUT, &time_stamp);
+
+                    printf("ret: %d, ble-accelerometer: pitch: %lf°, roll: %lf°\n", ret, tmp_pitch, tmp_roll);
+                    //printf("ret: %d, ble-temperature: %lf°C\n", ret, tmp_temperature);
+                    //printf("ret: %d, ble-gyroscope: yaw= %lf°\n", ret, tmp_yaw);
+                    //printf("--------------------------------------------------------------------------\n");
 
                     if (ret < 0) {
-                        ble_conn.rw_retry_cnt ++;
+                        ble_conn.rw_retry_cnt++;
 
-                        if (ble_conn.rw_retry_cnt == BLE_RW_RETRYCNT) {
+                        if (ble_conn.rw_retry_cnt >= BLE_RW_RETRYCNT) {
                             ble_conn.state = BLE_STATE_DISCONNECTED; // time to disconnect
                             ble_conn.rw_retry_cnt = 0; // new retrials
                         }
                         else
-                            ble_conn.state = BLE_STATE_WF_READ; // try still reading
+                            ble_conn.state = BLE_STATE_WF_READ; // try still reading the sensor values
                     }
                     else { // succesfull reading
-                        *temperature = (float) double_val;
+                        *pitch = (float) tmp_pitch; // update sensor value
+                        *roll = (float) tmp_roll; // update sensor value
                         ble_conn.state = BLE_STATE_WF_READ;
+                        ble_conn.rw_retry_cnt = 0; // new retrials
                     }
                 }
                 break;
 
             case BLE_STATE_DISCONNECTED: // wait for the next reading
                 {
-                    printf("Disconnect\n");
+                    ble_disconnect();
+                    control_am335x_user_led0(0); // led off
+                    printf("BLE disconnect\n");
+                    syslog(LOG_ERR, "BLE disconnect\n");
+                    ble_conn.state = BLE_STATE_WF_RECONN;
+                }
+                break;
+
+            default:
+                {
+                    printf("FATAL: wrong state in update_loop\n");
+                    syslog(LOG_ERR, "FATAL: wrong state in update_loop\n");
                     ble_disconnect();
                     control_am335x_user_led0(0); // led off
                     ble_conn.state = BLE_STATE_WF_RECONN;
                 }
                 break;
-
         }
     }
 }
@@ -344,7 +382,7 @@ void update_loop(char *ble_addr, float *temperature)
 void *ble_temp_update_thread( void *ptr )
 {
     char *ble_addr = ptr;
-    update_loop(ble_addr, &ble_temp);
+    update_loop(ble_addr, &ble_pitch, &ble_roll);
     return NULL; // never reached
 }
 

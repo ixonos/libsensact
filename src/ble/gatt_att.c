@@ -36,22 +36,115 @@ short convert_int16_le(unsigned char *buff, int offset)
     return val;
 }
 
-int DecReadByGroupResponse(unsigned char *data, unsigned int length, unsigned short *end_hdl) // decode read-response PDU
+int DecReadByTypeResponseCharacteristics(unsigned char *data, unsigned int length, unsigned short *end_hdl, struct dynamic_char_t *char_ptr)
 {
-    int i;
-    int type = data[1];
-    unsigned int num = (length - 2) / data[1];
+    // decode characteristics services
 
-    unsigned short start_handle, end_handle;
-    long uuid;
+    int i;
+    int elem;
+    unsigned int num;
+
+    unsigned short start_handle, char_handle, properties;
+
+    /* PDU must contain at least:
+         * - Attribute Opcode: 1 octet
+         * - type (element length): 1 octet
+         * - Attribute Data List (at least one entry):
+         *   - Attribute start Handle: 2 octets
+         *   - Char Characteristics Handle: 2 octets
+         *   - Attribute Value (uuid): at least 1 octet */
+
+    if (data[0] != ATT_OP_READ_BY_TYPE_RESP)
+        // this Attribute Opcode is wrong response type.
+        // This will also be stop-condition for getting next values.
+        return -1;
+
+    elem = data[1]; // number of bytes in one element (element includes one start-handle, end-handle and uuid)
+
+    if (length < 8 || elem < 6 || ((length - 2) % elem))
+        return -1;
+
+    num = (length - 2) / elem; // number of elements
 
     for (i = 0; i < num; i++) {
-	start_handle = read_uint16_le(data, 2 + i * type + 0);
-	end_handle = read_uint16_le(data, 2 + i * type + 2);
-        uuid = read_uint16_le(data, 2 + i * type + 4);
-	printf("start_hdl: 0x%x, end_handle: 0x%x, uuid: 0x%x\n", start_handle, end_handle, (unsigned int) uuid);
+	start_handle = read_uint16_le(data, 2 + i * elem + 0); // 2 octets
+	
+	char_ptr->property = data[2 + i * elem + 2]; // 1 octet
+	char_ptr->handle = read_uint16_le(data, 2 + i * elem + 3); // 2 octets
+
+	if(elem == 0x7) // element size = 7 octets
+	    // e.g. 0x9 0x7    0x2 0x0 0x2 0x3 0x0 0x0 0x2a    0x4 0x0 0x2 0x5 0x0 0x1 0x2a    0x6 0x0 0xa 0x7 0x0 0x2 0x2a
+            char_ptr->UUID = read_uint16_le(data, 2 + i * elem + 5); // this element has 16-bit uuid
+
+	else if(elem == 0x15)// element size = 0x15 = 21 octets
+	    // This element has 128-bit uuid containing base-UUID and sensor specific 16-bit part. Lets capture 16-bit part.
+	    // e.g. TI-specific base UIID (128 bit): TI_BASE_UUID = 0xF000xxxx04514000B000000000000000
+	    // So store 'xxxx'-octets.
+	    // Notice the order of the bytes (LSB first): 
+	    //     e.g. "0x9 0x15   0x24 0x0 0x12 0x25 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0xb0 0x0 0x40 0x51 0x4 0x1 0xaa 0x0 0xf0"
+	    //          => UUID=0xaa01
+	    char_ptr->UUID = read_uint16_le(data, 2 + i * elem + (21 - 4));
+	else
+	    return -1; // non-supported element-size
+
+	printf("start_hdl: 0x%x, propertys: 0x%x, char_handle: 0x%x, uuid: 0x%x\n", start_handle, char_ptr->property, char_ptr->handle, char_ptr->UUID);
+	*end_hdl = start_handle + 1; // end-handle of this response will be start-handle for next request (makes it possible to get other elements)
+	char_ptr++;
     }
-    *end_hdl = end_handle;
+
+    return num;
+}
+
+int DecReadByGroupResponsePrimary(unsigned char *data, unsigned int length, unsigned short *end_hdl) // decode primary services
+{
+    int i;
+    int elem;
+    unsigned int num;
+
+    unsigned short start_handle, end_handle;
+    unsigned int uuid;
+
+    /* PDU must contain at least:
+         * - Attribute Opcode: 1 octet
+         * - type (element length): 1 octet
+         * - Attribute Data List (at least one entry):
+         *   - Attribute start Handle: 2 octets
+         *   - End Group Handle: 2 octets
+         *   - Attribute Value (uuid): at least 1 octet */
+
+    if (data[0] != ATT_OP_READ_BY_GROUP_RESP) // this Attribute Opcode is wrong response type
+        return -1;
+
+    elem = data[1]; // number of bytes in one element (element includes one start-handle, end-handle and uuid)
+
+    if (length < 7 || elem < 5 || ((length - 2) % elem))
+        return -1;
+
+    num = (length - 2) / elem; // number of elements
+
+    for (i = 0; i < num; i++) {
+	start_handle = read_uint16_le(data, 2 + i * elem + 0);
+	end_handle = read_uint16_le(data, 2 + i * elem + 2);
+
+	if(elem == 0x6) // element size = 6 octets
+	    // e.g. 0x11 0x6    0x1 0x0 0xb 0x0 0x0 0x18     0xc 0x0 0xf 0x0 0x1 0x18     0x10 0x0 0x22 0x0 0xa 0x18
+            uuid = read_uint16_le(data, 2 + i * elem + 4); // this element has 16-bit uuid
+
+	else if(elem == 0x14)// element size = 0x14 = 20 octets
+	    // This element has 128-bit uuid containing base-UUID and sensor specific 16-bit part. Lets capture 16-bit part.
+	    // e.g. TI-specific base UIID (128 bit): TI_BASE_UUID = 0xF000xxxx04514000B000000000000000
+	    // So store 'xxxx'-octets.
+	    // Notice the order of the bytes (LSB first):
+	    //         e.g. "0x11 0x14     0x39 0x0 0x43 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0xb0 0x0 0x40 0x51 0x4 0x20 0xaa 0x0 0xf0 "
+	    //               => UUID=0xaa20
+	    uuid = read_uint16_le(data, 2 + i * elem + (20 - 4));
+	else
+	    return -1; // non-supported element-size
+
+	printf("start_hdl: 0x%x, end_handle: 0x%x, uuid: 0x%x\n", start_handle, end_handle, uuid);
+    }
+
+    *end_hdl = end_handle; // end-handle of this response will be start-handle for next request (makes it possible to get other elements)
 
     return 0;
 }
@@ -59,6 +152,17 @@ int DecReadByGroupResponse(unsigned char *data, unsigned int length, unsigned sh
 void EncReadByGroupRequest(unsigned char *buff, int *length, unsigned short start_hdl, unsigned short end_hdl, unsigned short groupUuid) // encode request PDU
 {
     buff[0] = ATT_OP_READ_BY_GROUP_REQ;
+
+    write_uint16_le(start_hdl, buff, 1);
+    write_uint16_le(end_hdl, buff, 3);
+    write_uint16_le(groupUuid, buff, 5);
+
+    *length = 7;
+}
+
+void EncReadByTypeRequest(unsigned char *buff, int *length, unsigned short start_hdl, unsigned short end_hdl, unsigned short groupUuid) // encode request PDU
+{
+    buff[0] = ATT_OP_READ_BY_TYPE_REQ;
 
     write_uint16_le(start_hdl, buff, 1);
     write_uint16_le(end_hdl, buff, 3);

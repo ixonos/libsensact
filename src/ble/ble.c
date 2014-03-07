@@ -20,6 +20,8 @@
 
 struct ble_t ble;
 
+struct characteristics_table_t characteristics_table;
+
 struct sockaddr_l2 {
   sa_family_t    l2_family;
   unsigned short l2_psm;
@@ -226,9 +228,11 @@ int ble_connect_l2cap_socket(int *ble_device_handle, char *addr)
     return 0;
 }
 
-void discoverServices(void)
+int discoverServices(void)
 {
-    int length=0;
+    // services not supported otherwise, but you can get those FYI by enabling printf in DecReadByGroupResponsePrimary()
+    int length = 0;
+    int ret = 0;
     unsigned char buff[30];
 
     unsigned short start_hdl = 0x0001;
@@ -236,11 +240,60 @@ void discoverServices(void)
 
     while (start_hdl != 0xFFFF) {
 	EncReadByGroupRequest(buff, &length, start_hdl, end_hdl, GATT_PRIM_SVC_UUID);
-	ble_write_l2cap_socket(/*int handle,*/ buff, length, 10);
-
+	ret = ble_write_l2cap_socket(/*int handle,*/ buff, length, 10);
+	if (ret < 0)
+	    return -1;
+	
 	length = ble_read_l2cap_socket(/*int handle,*/ buff, sizeof(buff), 10, NULL);
-	DecReadByGroupResponse(buff, length, &start_hdl);
+	if (ret < 0)
+	    return -1;
+	
+	ret = DecReadByGroupResponsePrimary(buff, length, &start_hdl);
+	if (ret < 0)
+	    return -1;
     }
+
+    return 0; // success
+}
+
+int discoverCharacteristics(void)
+{
+    int length = 0;
+    int i, num_elems = 0, total_num_attr = 0, ret = 0;
+    unsigned char buff[30];
+    unsigned short start_hdl = 0x0001;
+    unsigned short end_hdl = 0xFFFF;
+    struct dynamic_char_t *char_ptr = &characteristics_table.dyn_attr[0];
+
+    memset(&characteristics_table, 0, sizeof(characteristics_table));
+
+    while (start_hdl != 0xFFFF) {
+	EncReadByTypeRequest(buff, &length, start_hdl, end_hdl, GATT_CHARAC_UUID);
+	ret = ble_write_l2cap_socket(/*int handle,*/ buff, length, 10);
+	if (ret < 0)
+	    return -1;
+	
+	length = ble_read_l2cap_socket(/*int handle,*/ buff, sizeof(buff), 10, NULL);
+	if (ret < 0)
+	    return -1;
+	
+	num_elems = DecReadByTypeResponseCharacteristics(buff, length, &start_hdl, char_ptr);
+	if (num_elems < 0)
+	    break;
+
+	char_ptr += num_elems;
+	total_num_attr += num_elems;
+
+	if (total_num_attr > sizeof(characteristics_table.dyn_attr)/sizeof(characteristics_table.dyn_attr[0]))
+	    break; // don't request over supported number of attributes
+    }
+
+    characteristics_table.nbr_attr = total_num_attr;
+
+    //for (i = 0, char_ptr = &characteristics_table.dyn_attr[0]; i < characteristics_table.nbr_attr; i++, char_ptr++)
+    //    printf("uuid: 0x%x, char_handle: 0x%x, properties: 0x%x\n", char_ptr->UUID, char_ptr->handle, char_ptr->property);
+
+    return 0; // success
 }
 
 int ble_read_val(unsigned short handle, unsigned char *buff, unsigned int buff_len, unsigned int *index, int *length, int timeout, double *time_stamp)
@@ -325,11 +378,11 @@ int ble_get_string(char *feature, char *value, int timeout, double *time_stamp)
    unsigned char buff[100];
    unsigned index = 0; // start-address after response-decoding
    unsigned char property;
-   Msg_Hdl msg_handler_ptr;
+   struct characteristics_table_t *char_ptr = &characteristics_table;
 
    memset(buff, 0, sizeof(buff));
 
-   if (find_att_handle(/*session_manuf,*/ feature, READ_SENSOR, 0, &data_handle, &property, &msg_handler_ptr) < 0)
+   if (find_att_handle(/*session_manuf,*/ feature, READ_SENSOR, char_ptr, &data_handle, &property, NULL) < 0)
         return -1; // handle not found
 
     ret = ble_read_val(data_handle, buff, sizeof(buff), &index, &length, timeout, time_stamp);
@@ -342,6 +395,56 @@ int ble_get_string(char *feature, char *value, int timeout, double *time_stamp)
     return 0;
 }
 
+int ble_sensor_status(char *feature, unsigned int read_write)
+{
+    // Status-flag is used for checking status of the sensor.
+    // So it makes it possible to avoid sensor to be enabled every time, sensor is accessed.
+    if (read_write == READ_SENSOR) // read status-flag of the sensor
+    {
+	if (!strcmp(feature, "Temp")) {
+	    if (ble.sensor_status & SENSOR_TEMP)
+	        return 1; // temperature-sensor already enabled
+	    else
+	        return 0;
+	}
+	else if (!strcmp(feature, "accelero")) {
+	    if (ble.sensor_status & SENSOR_ACCELER)
+	        return 1; //accelerometer-sensor already enabled
+	    else
+	        return 0;
+	}
+	else if (!strcmp(feature, "magnetom")) {
+	    if (ble.sensor_status & SENSOR_MAGNETO)
+	        return 1; //magnetometer-sensor already enabled
+	    else
+	        return 0;
+	}
+	else if (!strcmp(feature, "gyroscope")) {
+	    if (ble.sensor_status & SENSOR_GYRO)
+	        return 1; //gyroscope-sensor already enabled
+	    else
+	        return 0;
+	}
+	else
+	    return -1; // requested sensor not supported
+    }
+    else if (read_write == ENABLE_SENSOR) // enable status-flag of the sensor by raising the corresponding bit
+    {
+	if (!strcmp(feature, "Temp"))
+	    ble.sensor_status |= SENSOR_TEMP;
+	else if (!strcmp(feature, "accelero"))
+	    ble.sensor_status |= SENSOR_ACCELER;
+	else if (!strcmp(feature, "magnetom"))
+	    ble.sensor_status |= SENSOR_MAGNETO;
+	else if (!strcmp(feature, "gyroscope"))
+	    ble.sensor_status |= SENSOR_GYRO;
+	else
+	    return -1; // requested sensor not supported
+    }
+
+    return -1; // requested sensor not supported
+}
+
 int ble_get_float(char *feature, double *value1, double *value2, double *value3, int timeout, double *time_stamp)
 {
     unsigned int data_handle, conf_handle;
@@ -351,13 +454,18 @@ int ble_get_float(char *feature, double *value1, double *value2, double *value3,
     unsigned index = 0; // start-address after response-decoding
     int ret = 0;
     Msg_Hdl msg_handler_ptr;
+    struct characteristics_table_t *char_ptr = &characteristics_table;
 
-    if (find_att_handle(/*session_manuf,*/ feature, READ_SENSOR, 0, &data_handle, &property, &msg_handler_ptr) < 0)
+    if (find_att_handle(/*session_manuf,*/ feature, READ_SENSOR, char_ptr, &data_handle, &property, &msg_handler_ptr) < 0)
         return -1; // handle not found
 
-    if (ble.sensor_status == 0) // sensor is disabled
+    ret = ble_sensor_status(feature, READ_SENSOR);
+    if (ret < 0)
+        return -1;
+
+    if (ret == 0) // sensor is disabled
     {
-	if (find_att_handle(/*session_manuf,*/ feature, ENABLE_SENSOR, 0, &conf_handle, &property, NULL) < 0)
+	if (find_att_handle(/*session_manuf,*/ feature, ENABLE_SENSOR, char_ptr, &conf_handle, &property, NULL) < 0)
 	    return -1; // handle not found
 
         if (!strcmp(feature, "gyroscope")) {
@@ -365,7 +473,8 @@ int ble_get_float(char *feature, double *value1, double *value2, double *value3,
 	    ret = ble_enable_notifications(data_handle + 0x01, 1, timeout);
 	    if (ret < 0)
                 return -1;
-	    usleep(500000);
+
+	    usleep(100000);
 
 	    // Trigger sensor-measurement by enabling 'x/y/z'-axis sensors.
 	    // 1 to enable X axis only, 2 to enable Y axis only, 3 = X and Y, 4 = Z only, 5 = X and Z, 6 = Y and Z, 7 = X, Y and Z
@@ -375,24 +484,33 @@ int ble_get_float(char *feature, double *value1, double *value2, double *value3,
 	    ret = ble_enable_notifications(data_handle + 0x01, 0x01, timeout);
 	    if (ret < 0)
                 return -1;
-	    usleep(500000);
+
+	    usleep(100000);
 
 	    ret = ble_enable_sensor(conf_handle, 1, timeout); // trigger sensor-measurement by enabling the sensor
 	    if (ret < 0)
                 return -1;
-	    usleep(500000);
 
-	    ret = ble_set_measuring_period(conf_handle + 0x03, 0x14, timeout); // set 200 ms (default period: 0xc8 = 200 [ms] -> 200 ms * 10 = 2 sec)
+	    usleep(100000);
+
+	    ret = ble_set_measuring_period(conf_handle + 0x03, 0x0A, timeout); // set 100 ms (default period: 0xc8 = 200 -> 200 ms * 10 = 2 sec)
     	    if (ret < 0)
                 return -1;
 	}
 	else if (!strcmp(feature, "accelero")) {
+/*	    ret = ble_enable_notifications(data_handle + 0x01, 0x01, timeout);
+	    if (ret < 0)
+                return -1;
+
+	    usleep(100000);
+*/
 	    ret = ble_enable_sensor(conf_handle, 1, timeout); // trigger sensor-measurement by enabling the sensor
 	    if (ret < 0)
                 return -1;
-	    usleep(500000);
 
-	    ret = ble_set_measuring_period(conf_handle + 0x03, 0x14, timeout); // set 200 ms (default period: 1s)
+	    usleep(100000);
+
+	    ret = ble_set_measuring_period(conf_handle + 0x03, 0x0A, timeout); // set 100 ms (default period: 1s)
     	    if (ret < 0)
                 return -1;
 	}
@@ -412,7 +530,7 @@ int ble_get_float(char *feature, double *value1, double *value2, double *value3,
     if (ret < 0)
         return -1;
 
-    ble.sensor_status = 1;
+    ble_sensor_status(feature, ENABLE_SENSOR);
 
     // call valid manufacturer specific response-handler
     ret = ( (*msg_handler_ptr)(&buff[index], length, (void*) value1, (void*) value2, (void*) value3, time_stamp) );
@@ -423,12 +541,14 @@ int ble_get_float(char *feature, double *value1, double *value2, double *value3,
 
 int ble_connect(char *ble_addr)
 {
-    ble.sensor_status = 0;
+    ble.sensor_status = 0; // clean first all status-indicators of the sensors
+
     return ble_connect_l2cap_socket(&ble.l2capSock, ble_addr);
 }
 
 int ble_disconnect(void)
 {
+    ble.sensor_status = 0; // clean all status-indicators of the sensors
     return ble_disconnect_l2cap_socket();
 }
 

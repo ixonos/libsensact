@@ -3,13 +3,13 @@
 #include <syslog.h>
 #include <math.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "TI_sensortag.h"
 #include "ble.h"
 #include "gatt_att.h"
 
-// magnetometer-variables in micro teslas,
-// scale for magnetic field of the earth: ~20- ~65 uT
+// magnetometer-variables are in micro teslas (notice: scale for magnetic field of the earth: ~20- ~65 uT)
 float max_magnetics_field = 0.0;
 float min_magnetics_field = 150.0;
 
@@ -21,39 +21,53 @@ double gyroRateValue1 = 0; //-1 Value (second latest measurement) for Runge-Kutt
 double gyroRateValue2 = 0; //-2 Value (third latest measurement) for Runge-Kutta integration
 double gyroRateValue3 = 0; //-3 Value (fourth latest measurement) for Runge-Kutta integration
 
-// characteristic table
-static const struct CHAR_DEF char_table[]=
+// characteristic table for TI-sensortag:
+// contains symbolic feature (e.g. 'magnetometer'), BLE UUID (data/configuration) and address of the response-message handler
+static const struct CHAR_DEF TI_sensortag_table[]=
 {
-    {   {'T','e','m','p',0},  ENABLE_SENSOR, IR_TEMPERATURE_CONFIG_UUID, ATT_WR_NO_RSP,          TI_TEMP_WR_HND,       NULL},
-    {   {'T','e','m','p',0},  READ_SENSOR, IR_TEMPERATURE_DATA_UUID,     ATT_RD,                 TI_TEMP_RD_HND,       ((Msg_Hdl*) &TI_sensortag_temperature)},
-    {   {'h','u','m','i','d','i','t','y',0},  ENABLE_SENSOR, TI_HUMID_CONF_UUID,   ATT_RD,       TI_HUMID_CONF_HND,    NULL},
-    {   {'h','u','m','i','d','i','t','y',0},  READ_SENSOR, TI_HUMID_DATA_UUID,     ATT_RD,       TI_HUMID_DATA_HND,    ((Msg_Hdl*) &TI_sensortag_humidity)},
-    {   {'g','y','r','o','s','c','o','p','e',0},  ENABLE_SENSOR, TI_GYRO_CONF_UUID,   ATT_RD,       TI_GYRO_CONF_HND,  NULL},
-    {   {'g','y','r','o','s','c','o','p','e',0},  READ_SENSOR, TI_GYRO_DATA_UUID,   ATT_RD,       TI_GYRO_DATA_HND,    ((Msg_Hdl*) &TI_sensortag_gyroscope)},
-    {   {'m','a','g','n','e','t','o','m',0},  ENABLE_SENSOR, TI_MAGN_CONF_UUID,   ATT_RD,       TI_MAGN_CONF_HND,  NULL},
-    {   {'m','a','g','n','e','t','o','m',0},  READ_SENSOR, TI_MAGN_DATA_UUID,   ATT_RD,       TI_MAGN_DATA_HND,    ((Msg_Hdl*) &TI_sensortag_magnetometer)},
-    {   {'a','c','c','e','l','e','r','o',0},  ENABLE_SENSOR, TI_ACCEL_CONF_UUID,   ATT_RD,       TI_ACCEL_CONF_HND,  NULL},
-    {   {'a','c','c','e','l','e','r','o',0},  READ_SENSOR, TI_ACCEL_DATA_UUID,   ATT_RD,       TI_ACCEL_DATA_HND,    ((Msg_Hdl*) &TI_sensortag_accelerometer)},
-    {   {0},                    0,         0,                                    0,                      0,                    0}
+    {   {'T','e','m','p',0},                     ENABLE_SENSOR,  IR_TEMPERATURE_CONFIG_UUID,    NULL},
+    {   {'T','e','m','p',0},                     READ_SENSOR,    IR_TEMPERATURE_DATA_UUID,      ((Msg_Hdl*) &TI_sensortag_temperature)},
+    {   {'h','u','m','i','d','i','t','y',0},     ENABLE_SENSOR,  TI_HUMID_CONF_UUID,            NULL},
+    {   {'h','u','m','i','d','i','t','y',0},     READ_SENSOR,    TI_HUMID_DATA_UUID,            ((Msg_Hdl*) &TI_sensortag_humidity)},
+    {   {'g','y','r','o','s','c','o','p','e',0}, ENABLE_SENSOR,  TI_GYRO_CONF_UUID,             NULL},
+    {   {'g','y','r','o','s','c','o','p','e',0}, READ_SENSOR,    TI_GYRO_DATA_UUID,             ((Msg_Hdl*) &TI_sensortag_gyroscope)},
+    {   {'m','a','g','n','e','t','o','m',0},     ENABLE_SENSOR,  TI_MAGN_CONF_UUID,             NULL},
+    {   {'m','a','g','n','e','t','o','m',0},     READ_SENSOR,    TI_MAGN_DATA_UUID,             ((Msg_Hdl*) &TI_sensortag_magnetometer)},
+    {   {'a','c','c','e','l','e','r','o',0},     ENABLE_SENSOR,  TI_ACCEL_CONF_UUID,            NULL},
+    {   {'a','c','c','e','l','e','r','o',0},     READ_SENSOR,    TI_ACCEL_DATA_UUID,            ((Msg_Hdl*) &TI_sensortag_accelerometer)},
+
+    {   {'H','W','r','e','v',0},                 READ_SENSOR,    DEVINFO_FIRMWARE_REV_UUID,     NULL},
+    {   {'S','W','r','e','v',0},                 READ_SENSOR,    DEVINFO_SOFTWARE_REV_UUID,     NULL},
+    {   {0},                                     0,              0,                              0  }
 } ;
 
-int find_att_handle(/*session_manuf,*/ char *feature, bool data_config, unsigned int uuid, 
+int find_att_handle(/*session_manuf,*/ char *feature, bool data_config, struct characteristics_table_t *char_ptr,
 		    unsigned int *hnd, unsigned char *property, Msg_Hdl *handler)
 {
     // find handle of the attribute by symbolic feature (e.g. 'temp')
     // and return handle and property of this attribute
 
-    struct CHAR_DEF const * char_ptr;
+    struct CHAR_DEF const * sensor_char_ptr;
+    struct dynamic_char_t *dyn_char_ptr = &char_ptr->dyn_attr[0];
+    int i, j, nbr_sensors;
 
-    for (char_ptr = char_table; sizeof(char_table)/sizeof(char_table[0]); char_ptr++)
+    nbr_sensors = sizeof(TI_sensortag_table)/sizeof(TI_sensortag_table[0]);
+
+    for (i = 0, sensor_char_ptr = TI_sensortag_table; i < nbr_sensors; i++, sensor_char_ptr++)
     {
-	if ( (strcmp(char_ptr->feature, feature)==0) && (char_ptr->data_config == data_config) ) // found
+	if ( (strcmp(sensor_char_ptr->feature, feature) == 0) && (sensor_char_ptr->data_config == data_config) ) // found
 	{
-	    *hnd = char_ptr->handle;
-	    *property = char_ptr->property;
+	    for (j = 0; j < char_ptr->nbr_attr; j++, dyn_char_ptr++)
+	    {
+	        if (sensor_char_ptr->UUID == dyn_char_ptr->UUID) {
+		    *hnd = dyn_char_ptr->handle; // this is the handle used for accessing the needed sensor !
+		    //printf("sensor handle: 0x%x\n", dyn_char_ptr->handle);
+		    break;
+		}
+	    }
 
 	    if (handler != NULL)
-	        *handler = (Msg_Hdl) char_ptr->msg_hdl;
+	        *handler = (Msg_Hdl) sensor_char_ptr->msg_hdl;
 
 	    return 0;
 	}
@@ -137,7 +151,7 @@ int TI_sensortag_temperature(unsigned char *buff, int length, void *value1, void
 
     target = extractTargetTemperature(buff, ambient);
 
-    printf("Temperature: ambient: %lf [°C], target: %lf [°C]\n", ambient, target);
+    printf("Temperature: ambient: %lf [°C], target: %lf [°C], time: %f [sec]\n", ambient, target, *time_stamp);
 
     if (value1 != NULL)
         memcpy(value1, &target, sizeof(double));
@@ -183,7 +197,7 @@ int TI_sensortag_gyroscope(unsigned char *buff, int length, void *value1, void *
 
     z_rate -= -0.07; //0.6; // this is experimental offset for decreasing zero point-drift; unfortunately varies in different TI-sensortags :(
 
-//    printf("x_rate: %lf, y_rate: %lf, z_rate: %lf, time: %lf\n", x_rate, y_rate, z_rate, new_time_stamp);
+    printf("x_rate: %lf, y_rate: %lf, z_rate: %lf, time: %lf\n", x_rate, y_rate, z_rate, new_time_stamp);
 
     gyroRateValue0 = z_rate;
 
@@ -296,17 +310,29 @@ int TI_sensortag_accelerometer(unsigned char *buff, int length, void *value1, vo
     // because x-axis and y-axis sensors measure zero-gravity, if sensor is in orthogonal position to the gravity-vector...
 
     // raw accelerometer-data for different gravity-components (= corresponding to x/y/z-directions).
-    float xAxis = (float)( (char)buff[0] ) / 64;
-    float yAxis = (float)( (char)buff[1] ) / 64;
-    float zAxis = (float)( (char)buff[2] ) / 64;
+    float xAxis = (float)( (int8_t)buff[0] ) / 64 * 1;
+    float yAxis = (float)( (int8_t)buff[1] ) / 64 * 1;
+    float zAxis = (float)( (int8_t)buff[2] ) / 64 * 1;
 
-//    printf("x: %f [g], y: %f [g], z: %f [g], time: %f [sec]\n", xAxis, yAxis, zAxis, *time_stamp);
+    printf("x: %f [g], y: %f [g], z: %f [g], time: %f [sec]\n", xAxis, yAxis, zAxis, *time_stamp);
 
     double pitch = RadiansToDegrees(atan2(yAxis, sqrt( pow(xAxis,2) + pow(zAxis,2) ) ) ); // pitch is rolling-angle over y-axis
 
+    // pitch in 0...360°
+    if ( (yAxis > 0 && zAxis < 0) || (yAxis < 0 && zAxis < 0) )
+      pitch = 180 - pitch;
+    else if (yAxis < 0 && zAxis > 0)
+      pitch = 360 + pitch;
+
     double roll = RadiansToDegrees(atan2(xAxis, sqrt( pow(yAxis,2) + pow(zAxis,2) ) ) ); // roll is rolling-angle over x-axis
 
-//    printf("pitch: %lf°, roll: %lf°\n", pitch, roll);
+    // roll in 0...360°
+    if ( (xAxis > 0 && zAxis < 0) || (xAxis < 0 && zAxis < 0) )
+      roll = 180 - roll;
+    else if (xAxis < 0 && zAxis > 0)
+      roll = 360 + roll;
+
+    printf("pitch: %lf°, roll: %lf°\n", pitch, roll);
 
     if (value1 != NULL)
         memcpy(value1, &pitch, sizeof(double));

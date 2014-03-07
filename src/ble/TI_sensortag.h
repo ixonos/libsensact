@@ -2,9 +2,17 @@
 #define TI_SENSORTAG_H
 
 #include <stdbool.h>
+#include "gatt_att.h"
 
 #define PI_VAL 3.14159265358979323846
 #define DEGREES_PER_RADIAN  (180.0/PI_VAL)
+
+// flags indicating different sensors
+#define SENSOR_TEMP            0x01
+#define SENSOR_ACCELER         0x02
+#define SENSOR_GYRO            0x04
+#define SENSOR_MAGNETO         0x08
+#define SENSOR_HUMIDITY        0x10
 
 // properties of the attribute
 enum
@@ -50,6 +58,7 @@ enum
 #define DEVINFO_SOFTWARE_REV_UUID       0x2A28
 #define DEVINFO_SOFTWARE_REV_HND        0x1C
 
+
 //--------------------------------------------------------------------------------------------------
 // TI specific UUID's:
 
@@ -80,7 +89,7 @@ enum
 
 //*************************************************************************************************************************
 
-// TI specific attribute handles
+// TI specific attribute handles. These are actually retrieved by discoverCharacteristics():
 
 // temperature
 #define TI_DEVICE_NAME_HND              0x03
@@ -93,9 +102,9 @@ enum
 #define TI_HUMID_CONF_HND               0x3C // enable/disable sensor
 
 // gyroscope
-#define TI_GYRO_DATA_HND               0x57 //0x60 // read data
-#define TI_GYRO_NOT_HND                0x58 //0x61 // notification
-#define TI_GYRO_CONF_HND               0x5B //0x64 // enable/disable sensor
+#define TI_GYRO_DATA_HND               0x60 //0x57 // read data
+#define TI_GYRO_NOT_HND                0x61 //0x58 // notification
+#define TI_GYRO_CONF_HND               0x64 //0x5B // enable/disable sensor
 
 // magnetometer
 #define TI_MAGN_DATA_HND               0x40 //0x46 // read data
@@ -107,23 +116,20 @@ enum
 #define TI_ACCEL_DATA_HND               0x2D // read data
 #define TI_ACCEL_NOT_HND                0x2E // notification
 #define TI_ACCEL_CONF_HND               0x31 // enable/disable sensor
-//#define TI_ACCEL_PERIOD_HND               0x34 // measurement period: [Input*10]ms
+#define TI_ACCEL_PERIOD_HND             0x34 // measurement period: [Input*10]ms
 
 
 typedef int (*Msg_Hdl) (unsigned char *buff, int length, void *value1, void *value2, void *value3, double *time_stamp);
 
-// GATT-attribute characteristic
+// GATT-attribute characteristic (non-alternative part of characteristics)
 typedef const struct CHAR_DEF
 {
-    char feature[10];
+    char feature[20];
     bool data_config; // 0=data reading, 1=configuration (enable/disable)
     unsigned int UUID;
-
-    unsigned char property;
-    unsigned int handle;
     Msg_Hdl *msg_hdl;  // message handler
 
-} char_dev;
+} char_def;
 
 
 int TI_sensortag_temperature(unsigned char *buff, int length, void *value1, void *value2, void *value3, double *time_stamp);
@@ -132,6 +138,6 @@ int TI_sensortag_gyroscope(unsigned char *buff, int length, void *value1, void *
 int TI_sensortag_magnetometer(unsigned char *buff, int length, void *value1, void *value2, void *value3, double *time_stamp);
 int TI_sensortag_accelerometer(unsigned char *buff, int length, void *value1, void *value2, void *value3, double *time_stamp);
 
-int find_att_handle(/*session_manuf,*/ char *feature, bool data_config, unsigned int uuid, unsigned int *hnd, unsigned char *property, Msg_Hdl *handler);
+int find_att_handle(/*session_manuf,*/ char *feature, bool data_config, struct characteristics_table_t *char_ptr, unsigned int *hnd, unsigned char *property, Msg_Hdl *handler);
 
 #endif
