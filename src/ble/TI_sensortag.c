@@ -319,19 +319,19 @@ int TI_sensortag_accelerometer(unsigned char *buff, int length, void *value1, vo
     double pitch = RadiansToDegrees(atan2(yAxis, sqrt( pow(xAxis,2) + pow(zAxis,2) ) ) ); // pitch is rolling-angle over y-axis
 
     // pitch in 0...360°
-    if ( (yAxis > 0 && zAxis < 0) || (yAxis < 0 && zAxis < 0) )
+/*    if ( (yAxis > 0 && zAxis < 0) || (yAxis < 0 && zAxis < 0) )
       pitch = 180 - pitch;
     else if (yAxis < 0 && zAxis > 0)
       pitch = 360 + pitch;
-
+*/
     double roll = RadiansToDegrees(atan2(xAxis, sqrt( pow(yAxis,2) + pow(zAxis,2) ) ) ); // roll is rolling-angle over x-axis
-
+    roll *= -1; // for rotating in UI 'correctly'
     // roll in 0...360°
-    if ( (xAxis > 0 && zAxis < 0) || (xAxis < 0 && zAxis < 0) )
+/*    if ( (xAxis > 0 && zAxis < 0) || (xAxis < 0 && zAxis < 0) )
       roll = 180 - roll;
     else if (xAxis < 0 && zAxis > 0)
       roll = 360 + roll;
-
+*/
     printf("pitch: %lf°, roll: %lf°\n", pitch, roll);
 
     if (value1 != NULL)

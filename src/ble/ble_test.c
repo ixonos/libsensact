@@ -95,12 +95,12 @@ int main(int argc, const char* argv[]) {
     double_val2= 0;
     double_val3= 0;
 
-    for (i = 0; i < 20; i++)
+    for (i = 0; i < 200; i++)
     {
 	printf("********************************************************************\n");
 	ret = ble_get_float("accelero", &double_val1, &double_val2, NULL, TIMEOUT, &time_stamp);
 	printf("ret: %d, pitch: %lf, roll: %lf\n", ret, double_val1, double_val2);
-	usleep(200000);
+	usleep(100000);
     }
 
 /*
