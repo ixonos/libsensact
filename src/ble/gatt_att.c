@@ -51,8 +51,9 @@ int DecReadByTypeResponseCharacteristics(unsigned char *data, unsigned int lengt
          * - type (element length): 1 octet
          * - Attribute Data List (at least one entry):
          *   - Attribute start Handle: 2 octets
+         *   - Attribute property: 1 octet
          *   - Char Characteristics Handle: 2 octets
-         *   - Attribute Value (uuid): at least 1 octet */
+         *   - Attribute Value (uuid): at least 2 octets */
 
     if (data[0] != ATT_OP_READ_BY_TYPE_RESP)
         // this Attribute Opcode is wrong response type.
@@ -61,7 +62,7 @@ int DecReadByTypeResponseCharacteristics(unsigned char *data, unsigned int lengt
 
     elem = data[1]; // number of bytes in one element (element includes one start-handle, end-handle and uuid)
 
-    if (length < 8 || elem < 6 || ((length - 2) % elem))
+    if (length < 9 || elem < 7 || ((length - 2) % elem))
         return -1;
 
     num = (length - 2) / elem; // number of elements
@@ -83,7 +84,7 @@ int DecReadByTypeResponseCharacteristics(unsigned char *data, unsigned int lengt
 	    // Notice the order of the bytes (LSB first): 
 	    //     e.g. "0x9 0x15   0x24 0x0 0x12 0x25 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0xb0 0x0 0x40 0x51 0x4 0x1 0xaa 0x0 0xf0"
 	    //          => UUID=0xaa01
-	    char_ptr->UUID = read_uint16_le(data, 2 + i * elem + (21 - 4));
+	    char_ptr->UUID = read_uint16_le(data, 2 + i * elem + (elem - 4));
 	else
 	    return -1; // non-supported element-size
 
