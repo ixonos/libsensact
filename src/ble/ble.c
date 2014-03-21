@@ -7,10 +7,12 @@
 #include <math.h>
 #include <regex.h>
 #include <sys/time.h>
+#include <stdlib.h>
 
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
 #include <bluetooth/hci_lib.h>
+#include <sys/ioctl.h>
 
 #include "ble.h"
 #include "gatt_att.h"
@@ -539,11 +541,53 @@ int ble_get_float(char *feature, double *value1, double *value2, double *value3,
 
 }
 
+
+
+// Idea for functions below (get_hci_handle and ble_conn_update ) is taken from /linux/bluetooth/bluez/tools/hcitool.c
+
+//int conn_list(int s, int dev_id, long arg)
+int get_hci_handle(int dev_id)
+{
+	struct hci_conn_list_req *cl;
+	struct hci_conn_info *ci;
+	int i;
+
+	int sk = socket(AF_BLUETOOTH, SOCK_RAW, BTPROTO_HCI);
+	
+	if (!(cl = malloc(10 * sizeof(*ci) + sizeof(*cl)))) {
+		perror("Can't allocate memory");
+		return -1;
+	}
+	cl->dev_id = dev_id;
+	cl->conn_num = 10;
+	ci = cl->conn_info;
+
+	if (ioctl(sk, HCIGETCONNLIST, (void *) cl)) {
+		perror("Can't get connection list");
+		free(cl);
+		return -1;
+	}
+
+	for (i = 0; i < cl->conn_num; i++, ci++) {
+		char bt_addr[18];
+		ba2str(&ci->bdaddr, bt_addr);
+		//TODO: validate that handle is according to our BT-address...
+		printf("\t%s handle %d state %d\n", (char *) bt_addr, ci->handle, ci->state);
+		return ci->handle;
+	}
+
+	free(cl);
+	close(sk);
+	return 0;
+}
+
 int ble_conn_update(void)
 {
     int dd, err, dev_id;
-    unsigned int handle = 43, min = 6, max = 6, latency = 0, timeout = 0x0C80;
+    unsigned int handle, min_conn_interval = 6, max_conn_interval = 6, slave_latency = 0, supervision_timeout = 0x0C80;
 
+    // notice: max_conn_interval/min_conn_interval in seconds is: multiple by 1.25 (e.g. 6*1.25 = 7.5 s). 
+    // This is the minimum interval value which can be set!
     dev_id = hci_get_route(NULL);
 
     dd = hci_open_dev(dev_id);
@@ -552,8 +596,12 @@ int ble_conn_update(void)
         return -1;
     }
 
-    if (hci_le_conn_update(dd, htobs(handle), htobs(min), htobs(max),
-            htobs(latency), htobs(timeout), 5000) < 0) 
+    handle = get_hci_handle(dev_id);
+    if (handle < 0)
+        return -1;
+
+    if (hci_le_conn_update(dd, htobs(handle), htobs(min_conn_interval), htobs(max_conn_interval),
+            htobs(slave_latency), htobs(supervision_timeout), 5000) < 0)
     {
         err = -errno;
         fprintf(stderr, "Could not change connection params: %s(%d)\n", strerror(-err), -err);

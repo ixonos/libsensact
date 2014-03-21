@@ -106,7 +106,6 @@ int main(int argc, const char* argv[]) {
 	printf("ret: %d, pitch: %lf, roll: %lf\n", ret, double_val1, double_val2);
 	usleep(50000);
     }
-
 /*
     double_val1 = 0;
     for (i = 0; i < 5; i++)
