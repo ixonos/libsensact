@@ -9,7 +9,7 @@
 
 int main(int argc, const char* argv[]) {
 
-    int i, ret, paramloc = 0,found = 0;
+    int i, ret = 0, paramloc = 0,found = 0;
     double double_val1 = 0, double_val2= 0, double_val3= 0, time_stamp = 0, first_time_stamp = 0;
     char buff[100];
 
@@ -33,6 +33,10 @@ int main(int argc, const char* argv[]) {
     syslog(LOG_ERR, "l2cap-ble starting");
 
     ble_connect((char *)argv[paramloc]);
+
+    ret = ble_conn_update();
+    if (ret < 0)
+        return 1;
 
 //*********************************************************
     ret = discoverServices();
@@ -95,12 +99,12 @@ int main(int argc, const char* argv[]) {
     double_val2= 0;
     double_val3= 0;
 
-    for (i = 0; i < 200; i++)
+    for (i = 0; i < 20; i++)
     {
 	printf("********************************************************************\n");
 	ret = ble_get_float("accelero", &double_val1, &double_val2, NULL, TIMEOUT, &time_stamp);
 	printf("ret: %d, pitch: %lf, roll: %lf\n", ret, double_val1, double_val2);
-	usleep(100000);
+	usleep(50000);
     }
 
 /*

@@ -539,6 +539,32 @@ int ble_get_float(char *feature, double *value1, double *value2, double *value3,
 
 }
 
+int ble_conn_update(void)
+{
+    int dd, err, dev_id;
+    unsigned int handle = 43, min = 6, max = 6, latency = 0, timeout = 0x0C80;
+
+    dev_id = hci_get_route(NULL);
+
+    dd = hci_open_dev(dev_id);
+    if (dd < 0) {
+        fprintf(stderr, "HCI device open failed\n");
+        return -1;
+    }
+
+    if (hci_le_conn_update(dd, htobs(handle), htobs(min), htobs(max),
+            htobs(latency), htobs(timeout), 5000) < 0) 
+    {
+        err = -errno;
+        fprintf(stderr, "Could not change connection params: %s(%d)\n", strerror(-err), -err);
+	return -1;
+    }
+
+    hci_close_dev(dd);
+
+    return 0;
+}
+
 int ble_connect(char *ble_addr)
 {
     ble.sensor_status = 0; // clean first all status-indicators of the sensors

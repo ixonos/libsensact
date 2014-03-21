@@ -17,6 +17,7 @@ struct ble_t
 int ble_get_float(char *feature, double *value1, double *value2, double *value3, int timeout, double *time_stamp);
 int ble_get_string(char *feature, char *value, int timeout, double *time_stamp);
 
+int ble_conn_update(void);
 int ble_connect(char *addr);
 int ble_disconnect(/*int handle*/);
 int ble_reconnect(int handle);
