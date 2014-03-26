@@ -42,9 +42,6 @@
 
 #include "sensact/plugin-manager.h"
 
-//#include "sensact/usb.h"
-#include "sensact/ble_sensortag.h"
-
 static int get_char(int device, char *name, char *value, int timeout);
 static int get_short(int device, char *name, short *value, int timeout);
 static int get_int(int device, char *name, int *value, int timeout);
@@ -76,14 +73,6 @@ void init(void)
 
     // Start plugin manager
     plugin_manager_start();
-/*
-    // Register default backend(s)
-    if (sa_register_backend(&usb_backend) != SA_OK)
-        printf("Error: %s\n", sa_error);
-
-    if (sa_register_backend(&ble_sensortag_backend) != SA_OK)
-        printf("Error: %s\n", sa_error);
-*/
 }
 
 int sa_register_device(struct sa_device_t *device)
