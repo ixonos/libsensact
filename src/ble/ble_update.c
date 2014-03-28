@@ -223,16 +223,16 @@ error:
 
 // This demo-program is simple way to adapt ble-interface to sensact-platform
 
-void update_loop(char *ble_addr, float *pitch, float *roll)
+void update_loop(char *ble_addr, float *pitch, float *roll, float *temperature)
 {
 
     // There is NO direct function call-API for sensact-server to retrieve BLE-values from libsensact yet,
-    // but this separately executable program to serve BLE-sensor parameters.
-    // Sensor-values are returned to upper level components (sensact-server, IxGui) as parameters.
+    // but this separately executable program retrieves BLE-sensor parameters.
+    // Sensor-values are returned to upper level components (sensact-server, IxGui) as parameters of the update_loop().
 
     // This function will handle connection-establishment (connect/reconnect) and reading of the supported sensor-values:
     // - temperature
-    // - pitch, roll, yaw (calculated by accelerometer, gyroscope, magnetometer data)
+    // - pitch, roll (calculated by accelerometer)
 
     // This function will called once, so it should be safe to do ble-specific initializations here
 
@@ -263,15 +263,16 @@ void update_loop(char *ble_addr, float *pitch, float *roll)
                 {
                     printf("--------------------------------------------------------------------------\n");
 
-                    // LE scan before connect (fixes "no route to host")
+                    // LE scan before connect. So, ble-connect is done in the right moment, when BLE-sensortag is advertising.
+		    // Fixes also "no route to host"-error, which sometimes occurs.
                     memset(ble_adv_addr, 0, sizeof(ble_adv_addr));
-                    control_am335x_user_led0(2); // led blinking blink
+                    control_am335x_user_led0(2); // led blinking
                     ret = ble_scan(ble_adv_addr);
 
                     if (ret >= 0)
                     {
-                        if (!strcmp(ble_conn.ble_addr, ble_adv_addr)) // advertised address match with address given by parameter to update_loop
-                            ret = ble_connect(ble_conn.ble_addr);
+                        if (!strcmp(ble_conn.ble_addr, ble_adv_addr))
+                            ret = ble_connect(ble_conn.ble_addr); // advertised address match with address given by parameter to update_loop
                         else 
                             ret = -1;
                     }
@@ -295,7 +296,7 @@ void update_loop(char *ble_addr, float *pitch, float *roll)
 		    syslog(LOG_ERR, "BLE connected\n");
 
                     printf("ret: %d, discoverCharacteristics\n\n", ret);
-                    ret = discoverCharacteristics();
+                    ret = discoverCharacteristics(); // read characteristics (for getting proper UUID-characteristics handle mapping)
                     if (ret < 0) // connection establishment failed
                     {
                         ble_conn.state = BLE_STATE_WF_RECONN;
@@ -324,16 +325,16 @@ void update_loop(char *ble_addr, float *pitch, float *roll)
 
             case BLE_STATE_READ:
                 {
-                    tmp_pitch = 0, tmp_roll = 0, tmp_yaw = 0, tmp_temperature = 0;
+                    tmp_pitch = 0, tmp_roll = 0, /*tmp_yaw = 0,*/ tmp_temperature = 0;
 
                      ret = ble_get_float("accelero", &tmp_pitch, &tmp_roll, NULL, TIMEOUT, &time_stamp);
-                    //if (ret >= 0)
-                    //    ret = ble_get_float("Temp", &tmp_temperature, NULL, NULL, TIMEOUT, &time_stamp);
+                     if (ret >= 0)
+                         ret = ble_get_float("Temp", &tmp_temperature, NULL, NULL, TIMEOUT, &time_stamp);
                     //else if (ret >= 0)
                     //    ret = ble_get_float("gyroscope", &tmp_yaw, NULL, NULL, TIMEOUT, &time_stamp);
 
                     printf("ret: %d, ble-accelerometer: pitch: %lf°, roll: %lf°\n", ret, tmp_pitch, tmp_roll);
-                    //printf("ret: %d, ble-temperature: %lf°C\n", ret, tmp_temperature);
+                    printf("ret: %d, ble-temperature: %lf°C\n", ret, tmp_temperature);
                     //printf("ret: %d, ble-gyroscope: yaw= %lf°\n", ret, tmp_yaw);
                     //printf("--------------------------------------------------------------------------\n");
 
@@ -350,6 +351,7 @@ void update_loop(char *ble_addr, float *pitch, float *roll)
                     else { // succesfull reading
                         *pitch = (float) tmp_pitch; // update sensor value
                         *roll = (float) tmp_roll; // update sensor value
+                        *temperature = (float) tmp_temperature; // update sensor value
                         ble_conn.state = BLE_STATE_WF_READ;
                         ble_conn.rw_retry_cnt = 0; // new retrials
                     }
@@ -382,7 +384,7 @@ void update_loop(char *ble_addr, float *pitch, float *roll)
 void *ble_temp_update_thread( void *ptr )
 {
     char *ble_addr = ptr;
-    update_loop(ble_addr, &ble_pitch, &ble_roll);
+    update_loop(ble_addr, &ble_pitch, &ble_roll, &ble_temp);
     return NULL; // never reached
 }
 
