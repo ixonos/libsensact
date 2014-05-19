@@ -91,8 +91,8 @@ int plugin_load(char *name)
         }
     }
 
-    // Add plugin location
-    sprintf(filename, "/usr/lib/sensact-%s.so", name);
+    // Add plugin location 
+    sprintf(filename, "sensact-%s.so", name);
 
     // Open plugin
     plugin_item.handle = dlopen(filename, RTLD_LAZY);
