@@ -268,10 +268,19 @@ error:
 
 int sa_disconnect(int device)
 {
+    if (device < 0 || device >= MAX_SESSIONS)
+	return SA_ERROR;
     pthread_mutex_lock(&session_mutex);
+    if (!session[device].allocated ||
+	!session[device].connected ||
+	session[device].disconnect == NULL) {
+        pthread_mutex_unlock(&session_mutex);
+	return SA_ERROR;
+    }
     if (session[device].disconnect(device) == SA_OK)
         session[device].connected = false;
     session[device].allocated = false;
+    session[device].disconnect = NULL;
     pthread_mutex_unlock(&session_mutex);
 
     return SA_OK;
