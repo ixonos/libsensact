@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2014, Ixonos Denmark ApS
- * Copyright (c) 2013-2014, Martin Lund
+ * Copyright (c) 2013-2014, Michael Møller
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,47 +29,36 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SESSION_H
-#define SESSION_H
+#ifndef SENS_EMULATOR_BLE_H_
+#define SENS_EMULATOR_BLE_H_
+#define shared_memory_ble 1236
 
-#include <stdbool.h>
-#include <pthread.h>
-#include "sensact.h"
+/**
+ *A little engine, with rpm and motor direction
+ */
+typedef struct {
+	float temp;
+	const char * temp_name;
+	void (*settemp)(float rpm);
+	float (*gettemp)(void);
 
-#define MAX_SESSIONS 40
+} ble_t;
 
-struct session_t
-{
-    bool allocated;
-    bool connected;
+/**
+ * call to create a engine
+ */
+ble_t *create_emulator_ble();
+/**
+ * destroy and detach memory
+ */
+void destroy_ble_emulator(void);
+/**
+ * set temperature
+ */
+void settemp(float temp);
+/*
+ * get temperature
+ */
+float gettemp(void);
 
-    struct sa_device_t *device;
-
-    int (*connect)(int device, void *config);
-    int (*disconnect)(int device);
-    int (*reconnect)(int device);
-
-
-    int (*write)(int device, char *data, int length, int timeout);
-    int (*read)(int device, char *data, int length, int timeout);
-
-    int (*get_char)(int device, char *name, char *value, int timeout);
-    int (*get_short)(int device, char *name, short *value, int timeout);
-    int (*get_int)(int device, char *name, int *value, int timeout);
-    int (*get_float)(int device, char *name, float *value, int timeout);
-    int (*get_data)(int device, char *name, void *data, int *data_size, int timeout);
-
-    int (*set_char)(int device, char *name, char value, int timeout);
-    int (*set_short)(int device, char *name, short value, int timeout);
-    int (*set_int)(int device, char *name, int value, int timeout);
-    int (*set_float)(int device, char *name, float value, int timeout);
-    int (*set_data)(int device, char *name, void *data, int data_size, int timeout);
-
-    // Session data (ref. to libusb connection handle etc.)
-    void *data;
-};
-
-extern struct session_t session[MAX_SESSIONS];
-extern pthread_mutex_t session_mutex;
-
-#endif
+#endif /* SENS_EMULATOR_BLE_H_ */

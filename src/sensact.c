@@ -41,18 +41,22 @@
 #include "sensact/list.h"
 
 #include "sensact/plugin-manager.h"
+#include "sensact/plugin.h"
+#include "sensact/sensact-emulator.h"
 
 static int get_char(int device, char *name, char *value, int timeout);
 static int get_short(int device, char *name, short *value, int timeout);
 static int get_int(int device, char *name, int *value, int timeout);
 static int get_float(int device, char *name, float *value, int timeout);
-static int get_data(int device, char *name, void *data, int *data_size, int timeout);
+static int get_data(int device, char *name, void *data, int *data_size,
+		int timeout);
 
 static int set_char(int device, char *name, char value, int timeout);
 static int set_short(int device, char *name, short value, int timeout);
 static int set_int(int device, char *name, int value, int timeout);
 static int set_float(int device, char *name, float value, int timeout);
-static int set_data(int device, char *name, void *data, int data_size, int timeout);
+static int set_data(int device, char *name, void *data, int data_size,
+		int timeout);
 
 static struct sa_device_t *device_list;
 static list_p backend_list;
@@ -60,98 +64,95 @@ static list_p backend_list;
 char error[PACKET_VALUE_MAX_SIZE];
 char *sa_error;
 
-void init(void)
-{
-    int i;
+void init(void) {
+	int i;
 
-    // Initialize session structures
-    for (i=0; i<MAX_SESSIONS; i++)
-        session[i].allocated = false;
+	// Initialize session structures
+	for (i = 0; i < MAX_SESSIONS; i++)
+		session[i].allocated = false;
 
-    // Create list for backend references
-    backend_list = create_list();
+	// Create list for backend references
+	backend_list = create_list();
 
     // Start plugin manager
     plugin_manager_start();
+
+	// Register default backend(s)
+	//if (sa_register_backend(&usb_backend) != SA_OK)
+	//	printf("Error: %s\n", sa_error);
+	if(sa_register_backend(&emulator_backend) != SA_OK){
+		printf("Error: %s\n", sa_error);
+	}
 }
 
-int sa_register_device(struct sa_device_t *device)
-{
-    // To be imlemented (FIXME)
-    return SA_OK;
+int sa_register_device(struct sa_device_t *device) {
+	// To be imlemented (FIXME)
+	return SA_OK;
 }
 
-int sa_unregister_device(char *name)
-{
-    // To be imlemented (FIXME)
-    return SA_OK;
+int sa_unregister_device(char *name) {
+	// To be imlemented (FIXME)
+	return SA_OK;
 }
 
-int sa_register_devices(struct sa_device_t *devices)
-{
-    // Check that device of same name is not already registered (FIXME)
+int sa_register_devices(struct sa_device_t *devices) {
+	// Check that device of same name is not already registered (FIXME)
 
-    device_list = devices;
-    return SA_OK;
+	device_list = devices;
+	return SA_OK;
 }
 
-int sa_register_backend(struct sa_backend_t *backend)
-{
-    struct sa_backend_t *backendp;
-    pthread_mutex_lock(&session_mutex);
+int sa_register_backend(struct sa_backend_t *backend) {
+	struct sa_backend_t *backendp;
+	pthread_mutex_lock(&session_mutex);
 
-    // Check that new backend has a name
-    if (backend->name == NULL)
-    {
-        sa_error = "Backend must have a name!";
-        pthread_mutex_unlock(&session_mutex);
-        return SA_ERROR;
-    }
+	// Check that new backend has a name
 
-    // Check that backend of same name is not already registered
-    list_iter_p iter = list_iterator(backend_list, FRONT);
-    while (list_next(iter)!=NULL)
-    {
-        backendp = (struct sa_backend_t *)list_current(iter);
-        if (strcmp(backendp->name, backend->name) == 0)
-        {
-            sa_error = "Backend already registered";
-            pthread_mutex_unlock(&session_mutex);
-            return SA_ERROR;
-        }
-    }
+	if (backend->name == NULL) {
+		sa_error = "Backend must have a name!";
+		pthread_mutex_unlock(&session_mutex);
+		return SA_ERROR;
+	}
 
-    // Check that backend implements required calls (FIXME)
+	// Check that backend of same name is not already registered
+	list_iter_p iter = list_iterator(backend_list, FRONT);
+	while (list_next(iter) != NULL) {
+		backendp = (struct sa_backend_t *) list_current(iter);
+		if (strcmp(backendp->name, backend->name) == 0) {
+			sa_error = "Backend already registered";
+			pthread_mutex_unlock(&session_mutex);
+			return SA_ERROR;
+		}
+	}
 
-    // Add backend to backend list
-    list_add(backend_list, backend, sizeof(struct sa_backend_t));
+	// Check that backend implements required calls (FIXME)
 
-    pthread_mutex_unlock(&session_mutex);
+	// Add backend to backend list
+	list_add(backend_list, backend, sizeof(struct sa_backend_t));
 
-    return SA_OK;
+	pthread_mutex_unlock(&session_mutex);
+
+	return SA_OK;
 }
 
-int sa_unregister_backend(char *name)
-{
-    // To be implemented (FIXME)
-    return SA_OK;
+int sa_unregister_backend(char *name) {
+	// To be implemented (FIXME)
+	return SA_OK;
 }
 
-int sa_list_backends(char *backends)
-{
-    struct sa_backend_t *backend;
-    pthread_mutex_lock(&session_mutex);
+int sa_list_backends(char *backends) {
+	struct sa_backend_t *backend;
+	pthread_mutex_lock(&session_mutex);
 
-    // Construct space-separated list of backends
-    list_iter_p iter = list_iterator(backend_list, FRONT);
-    while (list_next(iter)!=NULL)
-    {
-        backend = (struct sa_backend_t *)list_current(iter);
-        sprintf(backends, "'%s' ", backend->name);
-    }
+	// Construct space-separated list of backends
+	list_iter_p iter = list_iterator(backend_list, FRONT);
+	while (list_next(iter) != NULL) {
+		backend = (struct sa_backend_t *) list_current(iter);
+		sprintf(backends, "'%s' ", backend->name);
+	}
 
-    pthread_mutex_unlock(&session_mutex);
-    return SA_OK;
+	pthread_mutex_unlock(&session_mutex);
+	return SA_OK;
 }
 
 int sa_connect(char *name)
@@ -283,7 +284,7 @@ int sa_disconnect(int device)
     session[device].disconnect = NULL;
     pthread_mutex_unlock(&session_mutex);
 
-    return SA_OK;
+	return SA_OK;
 }
 
 int sa_plugin_load(char *name)
@@ -370,118 +371,108 @@ static int send_command(
 
 // Default get functions (send_command uses read/write functions)
 
-static int get_char(int device, char *name, char *value, int timeout)
-{
-    return send_command(device, GET_CHAR, name, (void *) value, NULL, NULL, 0, timeout);
+static int get_char(int device, char *name, char *value, int timeout) {
+	return send_command(device, GET_CHAR, name, (void *) value, NULL, NULL, 0,
+			timeout);
 }
 
-static int get_short(int device, char *name, short *value, int timeout)
-{
-    return send_command(device, GET_SHORT, name, (void *) value, NULL, NULL, 0, timeout);
+static int get_short(int device, char *name, short *value, int timeout) {
+	return send_command(device, GET_SHORT, name, (void *) value, NULL, NULL, 0,
+			timeout);
 }
 
-static int get_int(int device, char *name, int *value, int timeout)
-{
-    return send_command(device, GET_INT, name, (void *) value, NULL, NULL, 0, timeout);
+static int get_int(int device, char *name, int *value, int timeout) {
+	return send_command(device, GET_INT, name, (void *) value, NULL, NULL, 0,
+			timeout);
 }
 
-static int get_float(int device, char *name, float *value, int timeout)
-{
-    return send_command(device, GET_FLOAT, name, (void *) value, NULL, NULL, 0, timeout);
+static int get_float(int device, char *name, float *value, int timeout) {
+	return send_command(device, GET_FLOAT, name, (void *) value, NULL, NULL, 0,
+			timeout);
 }
 
-static int get_data(int device, char *name, void *data, int *data_size, int timeout)
-{
-    return send_command(device, GET_DATA, name, data, data_size, NULL, 0, timeout);
+static int get_data(int device, char *name, void *data, int *data_size,
+		int timeout) {
+	return send_command(device, GET_DATA, name, data, data_size, NULL, 0,
+			timeout);
 }
 
 // Get functions
 
-int sa_get_char(int device, char *name, char *value, int timeout)
-{
-    return session[device].get_char(device, name, value, timeout);
+int sa_get_char(int device, char *name, char *value, int timeout) {
+	return session[device].get_char(device, name, value, timeout);
 }
 
-int sa_get_short(int device, char *name, short *value, int timeout)
-{
-    return session[device].get_short(device, name, value, timeout);
+int sa_get_short(int device, char *name, short *value, int timeout) {
+	return session[device].get_short(device, name, value, timeout);
 }
 
-int sa_get_int(int device, char *name, int *value, int timeout)
-{
-    return session[device].get_int(device, name, value, timeout);
+int sa_get_int(int device, char *name, int *value, int timeout) {
+	return session[device].get_int(device, name, value, timeout);
 }
 
-int sa_get_float(int device, char *name, float *value, int timeout)
-{
-    return session[device].get_float(device, name, value, timeout);
+int sa_get_float(int device, char *name, float *value, int timeout) {
+	return session[device].get_float(device, name, value, timeout);
 }
 
-int sa_get_data(int device, char *name, void *data, int *data_size, int timeout)
-{
-    return session[device].get_data(device, name, data, data_size, timeout);
+int sa_get_data(int device, char *name, void *data, int *data_size, int timeout) {
+	return session[device].get_data(device, name, data, data_size, timeout);
 }
 
 // Default set functions (send_command uses read/write)
 
-static int set_char(int device, char *name, char value, int timeout)
-{
-    return send_command(device, SET_CHAR, name, NULL, NULL, (void *) &value, sizeof(char), timeout);
+static int set_char(int device, char *name, char value, int timeout) {
+	return send_command(device, SET_CHAR, name, NULL, NULL, (void *) &value,
+			sizeof(char), timeout);
 }
 
-static int set_short(int device, char *name, short value, int timeout)
-{
-    return send_command(device, SET_SHORT, name, NULL, NULL, (void *) &value, sizeof(short), timeout);
+static int set_short(int device, char *name, short value, int timeout) {
+	return send_command(device, SET_SHORT, name, NULL, NULL, (void *) &value,
+			sizeof(short), timeout);
 }
 
-static int set_int(int device, char *name, int value, int timeout)
-{
-    return send_command(device, SET_INT, name, NULL, NULL, (void *) &value, sizeof(int), timeout);
+static int set_int(int device, char *name, int value, int timeout) {
+	return send_command(device, SET_INT, name, NULL, NULL, (void *) &value,
+			sizeof(int), timeout);
 }
 
-static int set_float(int device, char *name, float value, int timeout)
-{
-    return send_command(device, SET_FLOAT, name, NULL, NULL, (void *) &value, sizeof(float), timeout);
+static int set_float(int device, char *name, float value, int timeout) {
+	return send_command(device, SET_FLOAT, name, NULL, NULL, (void *) &value,
+			sizeof(float), timeout);
 }
 
-static int set_data(int device, char *name, void *data, int data_size, int timeout)
-{
-    if (data_size > PACKET_VALUE_MAX_SIZE)
-    {
-        sa_error = "Size of data must not exceed 1024 bytes";
-        return SA_ERROR;
-    }
-    return send_command(device, SET_DATA, name, NULL, NULL, data, data_size, timeout);
+static int set_data(int device, char *name, void *data, int data_size,
+		int timeout) {
+	if (data_size > PACKET_VALUE_MAX_SIZE) {
+		sa_error = "Size of data must not exceed 1024 bytes";
+		return SA_ERROR;
+	}
+	return send_command(device, SET_DATA, name, NULL, NULL, data, data_size,
+			timeout);
 }
 
 // Set functions
 
-int sa_set_char(int device, char *name, char value, int timeout)
-{
-    return session[device].set_char(device, name, value, timeout);
+int sa_set_char(int device, char *name, char value, int timeout) {
+	return session[device].set_char(device, name, value, timeout);
 }
 
-int sa_set_short(int device, char *name, short value, int timeout)
-{
-    return session[device].set_short(device, name, value, timeout);
+int sa_set_short(int device, char *name, short value, int timeout) {
+	return session[device].set_short(device, name, value, timeout);
 }
 
-int sa_set_int(int device, char *name, int value, int timeout)
-{
-    return session[device].set_int(device, name, value, timeout);
+int sa_set_int(int device, char *name, int value, int timeout) {
+	return session[device].set_int(device, name, value, timeout);
 }
 
-int sa_set_float(int device, char *name, float value, int timeout)
-{
-    return session[device].set_float(device, name, value, timeout);
+int sa_set_float(int device, char *name, float value, int timeout) {
+	return session[device].set_float(device, name, value, timeout);
 }
 
-int sa_set_data(int device, char *name, void *data, int data_size, int timeout)
-{
-    if (data_size > PACKET_VALUE_MAX_SIZE)
-    {
-        sa_error = "Size of data must not exceed 1024 bytes";
-        return SA_ERROR;
-    }
-    return session[device].set_data(device, name, data, data_size, timeout);
+int sa_set_data(int device, char *name, void *data, int data_size, int timeout) {
+	if (data_size > PACKET_VALUE_MAX_SIZE) {
+		sa_error = "Size of data must not exceed 1024 bytes";
+		return SA_ERROR;
+	}
+	return session[device].set_data(device, name, data, data_size, timeout);
 }

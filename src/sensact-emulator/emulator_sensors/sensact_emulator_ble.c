@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2014, Ixonos Denmark ApS
- * Copyright (c) 2013-2014, Martin Lund
+ * Copyright (c) 2013-2014, Michael Møller
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,48 +28,48 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/shm.h>
+#include <time.h>
+#include "sensact_emulator_ble.h"
 
-#ifndef SESSION_H
-#define SESSION_H
+void *shared_mem = (void*) 0;
+ble_t * ble_device;
+int shmid;
+ble_t *create_emulator_ble() {
 
-#include <stdbool.h>
-#include <pthread.h>
-#include "sensact.h"
+	shmid = shmget((key_t) shared_memory_ble, sizeof(ble_t), 0666 | IPC_CREAT);
+	if (shmid == -1) {
+		printf("shmget failed\n");
+	} else {
+		shared_mem = shmat(shmid, (void *) 0, 0);
+		ble_device = (ble_t*) shared_mem;
+	}
+	if (ble_device != NULL) {
+		ble_device->gettemp = gettemp;
+		ble_device->settemp = settemp;
+		ble_device->temp = 10;
+		ble_device->temp_name = "ble_temp";
+	}
 
-#define MAX_SESSIONS 40
+	return ble_device;
+}
+/**
+ * detach memory
+ */
+void destroy_ble_emulator() {
+	shmdt(shared_mem);
+}
 
-struct session_t
-{
-    bool allocated;
-    bool connected;
+void settemp(float temp) {
+	ble_device->temp = temp;
+}
 
-    struct sa_device_t *device;
+float gettemp(void) {
+	return ble_device->temp;
+}
 
-    int (*connect)(int device, void *config);
-    int (*disconnect)(int device);
-    int (*reconnect)(int device);
-
-
-    int (*write)(int device, char *data, int length, int timeout);
-    int (*read)(int device, char *data, int length, int timeout);
-
-    int (*get_char)(int device, char *name, char *value, int timeout);
-    int (*get_short)(int device, char *name, short *value, int timeout);
-    int (*get_int)(int device, char *name, int *value, int timeout);
-    int (*get_float)(int device, char *name, float *value, int timeout);
-    int (*get_data)(int device, char *name, void *data, int *data_size, int timeout);
-
-    int (*set_char)(int device, char *name, char value, int timeout);
-    int (*set_short)(int device, char *name, short value, int timeout);
-    int (*set_int)(int device, char *name, int value, int timeout);
-    int (*set_float)(int device, char *name, float value, int timeout);
-    int (*set_data)(int device, char *name, void *data, int data_size, int timeout);
-
-    // Session data (ref. to libusb connection handle etc.)
-    void *data;
-};
-
-extern struct session_t session[MAX_SESSIONS];
-extern pthread_mutex_t session_mutex;
-
-#endif

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2014, Ixonos Denmark ApS
- * Copyright (c) 2013-2014, Martin Lund
+ * Copyright (c) 2013-2014, Michael Møller
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,47 +29,87 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SESSION_H
-#define SESSION_H
+#ifndef SENS_EMULATOR_SENSHUB_H_
+#define SENS_EMULATOR_SENSHUB_H_
 
-#include <stdbool.h>
-#include <pthread.h>
-#include "sensact.h"
+#define shared_memory_senshub 1235
+/**
+ *A TI senshub emulation
+ */
 
-#define MAX_SESSIONS 40
+typedef struct {
+	int roll;
+	const char *roll_name;
+	void (*setroll)(int roll);
+	int (*getroll)(void);
 
-struct session_t
-{
-    bool allocated;
-    bool connected;
+	int pitch;
+	const char *pitch_name;
+	void (*setpitch)(int roll);
+	int (*getpitch)(void);
 
-    struct sa_device_t *device;
+	int yaw;
+	const char *yaw_name;
+	void (*setyaw)(int yaw);
+	int (*getyaw)(void);
 
-    int (*connect)(int device, void *config);
-    int (*disconnect)(int device);
-    int (*reconnect)(int device);
+	float light;
+	const char *light_name;
+	void (*setlight)(float light);
+	float (*getlight)(void);
 
+	float presure;
+	const char *presure_name;
+	void (*setpresure)(float presure);
+	float (*getpresure)(void);
 
-    int (*write)(int device, char *data, int length, int timeout);
-    int (*read)(int device, char *data, int length, int timeout);
+	float objtemp;
+	const char *objtemp_name;
+	float (*getobjtemp)(void);
+	void (*setobjtemp)(float objtemp);
 
-    int (*get_char)(int device, char *name, char *value, int timeout);
-    int (*get_short)(int device, char *name, short *value, int timeout);
-    int (*get_int)(int device, char *name, int *value, int timeout);
-    int (*get_float)(int device, char *name, float *value, int timeout);
-    int (*get_data)(int device, char *name, void *data, int *data_size, int timeout);
+	float ambtemp;
+	const char *ambtemp_name;
+	float (*getambtemp)(void);
+	void (*setambtemp)(float ambtemp);
 
-    int (*set_char)(int device, char *name, char value, int timeout);
-    int (*set_short)(int device, char *name, short value, int timeout);
-    int (*set_int)(int device, char *name, int value, int timeout);
-    int (*set_float)(int device, char *name, float value, int timeout);
-    int (*set_data)(int device, char *name, void *data, int data_size, int timeout);
+	float humidity;
+	const char *humidity_name;
+	void (*sethumidity)(float humidity);
+	float (*gethumidity)(void);
+} senshub_t;
 
-    // Session data (ref. to libusb connection handle etc.)
-    void *data;
-};
+/**
+ * call to create a engine and attach shared memory
+ */
+senshub_t *create_senshub_emulator();
+/**
+ * Detach the shared memory
+ */
+void destroy_senshub_emulator(void);
 
-extern struct session_t session[MAX_SESSIONS];
-extern pthread_mutex_t session_mutex;
+int getroll();
+void setroll(int roll);
+
+int getpitch();
+void setpitch(int pitch);
+
+int getyaw();
+void setyaw(int yaw);
+
+float getlight();
+void setlight(float light);
+
+float getpresure();
+void setpresure(float presure);
+
+float getobjtemp();
+void setobjtemp(float objtemp);
+
+float getambtemp();
+void setambtemp(float ambtemp);
+
+float gethumidity();
+void sethumidity(float humidity);
 
 #endif

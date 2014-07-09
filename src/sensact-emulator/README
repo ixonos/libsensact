@@ -1,0 +1,56 @@
+A Test framework and some emulated sensors.
+
+The build target test-emulator will build a executable that can connect to the server and run tests against the UI.
+Emulated sensors are added to the server topology of connected sensors. The backend is called "emulator".
+Emulated sensors are build as part of the "libsensact.so" currently.
+To run the emulator set the library path as: export LD_LIBRARY_PATH=.
+
+If the tests are not run the emulated engine will react on UI input for example the Motor speed control.
+If the tests are run with ./emulator the framework will start executing a series of test.
+
+The emulated sensors are manipulated via shared memory and the not set and get functions for the sensors them self.
+The shared memory is setup as the initial part of the test suite. If this fails for some reason you will see the 
+"setup failed!" message in the terminal.
+
+The following is a example configuration of the sensact server, found in sensact.c on the server.
+The backend named "emulator" is already registered. This will create the three sensors. 
+
+
+static  emulator_config_t emulator_senshub_config = {
+       .name = emulator_senshub,
+    };
+
+    static  emulator_config_t emulator_engine_config = {
+        .name = emulator_engine,
+    };
+
+    static  emulator_config_t emulator_ble_config = {
+    	.name = emulator_bluetooth_lowenergy_device,
+     };
+
+
+
+    static struct sa_device_t devices[] = {
+        {   .name = "nfc0",
+            .description = "TI Tiva Launchpad device (with NFC)",
+            .backend = "usb",
+            .config = &usb_nfc0_config },
+
+        {   .name = "motor0",
+            .description = "TI Tiva Launchpad device (with motor)",
+            .backend = "emulator",
+            .config = &emulator_engine_config },
+
+        {   .name = "sensortag0",
+            .description = "BLE Device",
+            .backend = "emulator",
+            .config = &emulator_ble_config },
+
+        {  .name = "senshub0",
+            .description = "TI Tiva Launchpad device (with Sensehub)",
+            .backend = "emulator",
+            .config = &emulator_senshub_config },
+
+        { }
+    };
+
