@@ -34,9 +34,9 @@
 
 struct usb_config_t
 {
-    const int vid;
-    const int pid;
-    const int endpoint;
+    int vid;
+    int pid;
+    int endpoint;
 };
 
 #endif

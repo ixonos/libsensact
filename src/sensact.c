@@ -164,6 +164,11 @@ int sa_connect(char *name)
     struct sa_device_t *device = device_list;
     struct sa_backend_t *backend;
 
+    if (!device) {
+	printf("Error: No devices configured!\n");
+	return -1;
+    }
+
     debug_printf("Connecting...\n");
     pthread_mutex_lock(&session_mutex);
 
