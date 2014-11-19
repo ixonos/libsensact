@@ -317,7 +317,7 @@ void update_loop(char *ble_addr, float *pitch, float *roll, float *temperature)
 
             case BLE_STATE_WF_READ: // wait for the next reading
                 {
-                    printf("Wait for reading-period (%d ms) to be elapsed...\n", BLE_READ_INTERVAL/1000);
+                    //printf("Wait for reading-period (%d ms) to be elapsed...\n", BLE_READ_INTERVAL/1000);
                     usleep(BLE_READ_INTERVAL);
                     ble_conn.state = BLE_STATE_READ;
                 }
@@ -333,8 +333,8 @@ void update_loop(char *ble_addr, float *pitch, float *roll, float *temperature)
                     //else if (ret >= 0)
                     //    ret = ble_get_float("gyroscope", &tmp_yaw, NULL, NULL, TIMEOUT, &time_stamp);
 
-                    printf("ret: %d, ble-accelerometer: pitch: %lf°, roll: %lf°\n", ret, tmp_pitch, tmp_roll);
-                    printf("ret: %d, ble-temperature: %lf°C\n", ret, tmp_temperature);
+                    //printf("ret: %d, ble-accelerometer: pitch: %lf°, roll: %lf°\n", ret, tmp_pitch, tmp_roll);
+                    //printf("ret: %d, ble-temperature: %lf°C\n", ret, tmp_temperature);
                     //printf("ret: %d, ble-gyroscope: yaw= %lf°\n", ret, tmp_yaw);
                     //printf("--------------------------------------------------------------------------\n");
 

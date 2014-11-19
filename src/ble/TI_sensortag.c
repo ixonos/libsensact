@@ -151,7 +151,7 @@ int TI_sensortag_temperature(unsigned char *buff, int length, void *value1, void
 
     target = extractTargetTemperature(buff, ambient);
 
-    printf("Temperature: ambient: %lf [°C], target: %lf [°C], time: %f [sec]\n", ambient, target, *time_stamp);
+    //printf("Temperature: ambient: %lf [°C], target: %lf [°C], time: %f [sec]\n", ambient, target, *time_stamp);
 
     if (value1 != NULL)
         memcpy(value1, &target, sizeof(double));
@@ -173,7 +173,7 @@ int TI_sensortag_humidity(unsigned char *buff, int length, void *value1, void *v
     // relative humidity
     humidity = -6.0 + 125.0 / 65536.0 * (double)((convert_int16_le(buff, 2) & ~0x0003));
 
-    printf("Humidity: %lf, Temperature: %lf [°C]\n", humidity, temperature);
+    //printf("Humidity: %lf, Temperature: %lf [°C]\n", humidity, temperature);
 
     if (value1 != NULL)
         memcpy(value1, &humidity, sizeof(double));
@@ -197,7 +197,7 @@ int TI_sensortag_gyroscope(unsigned char *buff, int length, void *value1, void *
 
     z_rate -= -0.07; //0.6; // this is experimental offset for decreasing zero point-drift; unfortunately varies in different TI-sensortags :(
 
-    printf("x_rate: %lf, y_rate: %lf, z_rate: %lf, time: %lf\n", x_rate, y_rate, z_rate, new_time_stamp);
+    //printf("x_rate: %lf, y_rate: %lf, z_rate: %lf, time: %lf\n", x_rate, y_rate, z_rate, new_time_stamp);
 
     gyroRateValue0 = z_rate;
 
@@ -264,7 +264,7 @@ int TI_sensortag_magnetometer(unsigned char *buff, int length, void *value1, voi
     float yAxis = (convert_int16_le(buff, 2)) * 2000.0 / 65536.0; // uT
     float zAxis = (convert_int16_le(buff, 4)) * 2000.0 / 65536.0; // uT
 
-    printf("xAxis: %f [uT], yAxis: %f [uT], zAxis: %f [uT], time: %f [sec]\n", xAxis, yAxis, zAxis, *time_stamp);
+    //printf("xAxis: %f [uT], yAxis: %f [uT], zAxis: %f [uT], time: %f [sec]\n", xAxis, yAxis, zAxis, *time_stamp);
 
     if (xAxis >= max_magnetics_field)
         max_magnetics_field = xAxis;
@@ -272,7 +272,7 @@ int TI_sensortag_magnetometer(unsigned char *buff, int length, void *value1, voi
     if (xAxis <= min_magnetics_field && xAxis > 0)
         min_magnetics_field = xAxis;
 
-    printf("max_magnetics_field: %f [uT], min_magnetics_field: %f [uT]\n", max_magnetics_field, min_magnetics_field);
+    //printf("max_magnetics_field: %f [uT], min_magnetics_field: %f [uT]\n", max_magnetics_field, min_magnetics_field);
 
     if ( (max_magnetics_field > min_magnetics_field) && (xAxis > min_magnetics_field) && (xAxis < max_magnetics_field) )
     {
@@ -280,7 +280,7 @@ int TI_sensortag_magnetometer(unsigned char *buff, int length, void *value1, voi
     }
 
 //    yaw = RadiansToDegrees(atan2(zAxis, xAxis));
-    printf("The yaw: %lf°\n", yaw);
+    //printf("The yaw: %lf°\n", yaw);
 
     if (value1 != NULL)
         memcpy(value1, &yaw, sizeof(double));
@@ -314,7 +314,7 @@ int TI_sensortag_accelerometer(unsigned char *buff, int length, void *value1, vo
     float yAxis = (float)( (int8_t)buff[1] ) / 64 * 1;
     float zAxis = (float)( (int8_t)buff[2] ) / 64 * 1;
 
-    printf("x: %f [g], y: %f [g], z: %f [g], time: %f [sec]\n", xAxis, yAxis, zAxis, *time_stamp);
+    //printf("x: %f [g], y: %f [g], z: %f [g], time: %f [sec]\n", xAxis, yAxis, zAxis, *time_stamp);
 
     double pitch = RadiansToDegrees(atan2(yAxis, sqrt( pow(xAxis,2) + pow(zAxis,2) ) ) ); // pitch is rolling-angle over y-axis
 
@@ -332,7 +332,7 @@ int TI_sensortag_accelerometer(unsigned char *buff, int length, void *value1, vo
     else if (xAxis < 0 && zAxis > 0)
       roll = 360 + roll;
 */
-    printf("pitch: %lf°, roll: %lf°\n", pitch, roll);
+    //printf("pitch: %lf°, roll: %lf°\n", pitch, roll);
 
     if (value1 != NULL)
         memcpy(value1, &pitch, sizeof(double));
